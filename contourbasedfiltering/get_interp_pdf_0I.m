@@ -60,10 +60,12 @@ pn=pn/det(Atransf);
 ind=pn<1e-70;
 pn(ind)=1e-70;
 
+% sort the points from highest to lowets prob
+[~,ind]=sort(pn(:),1,'descend');
+pn=pn(ind);
+Xn=Xn(ind,:);
+
 logpn = log(pn);
-
-% keyboard
-
 
 
 %% plottinmg
@@ -74,9 +76,7 @@ title(['time step = ',num2str(Tk)])
 % plot3(Y(:,1),Y(:,2),log(pn),'ro')
 %% fitting poly to log of probas
 % keyboard
-[~,ind]=sort(pn(:),1,'descend');
-pn=pn(ind);
-Xn=Xn(ind,:);
+
 Pf=Basis_polyND(dim,Nm);
 % now interpolate the polynomials to Xn and logpn
 % Nleastfit = 3*length(Pf);
@@ -102,7 +102,8 @@ Xbnd=[]
 % Xbnd=GH_points(zeros(dim,1),eye(dim),6);
 % Xbnd=3*Xbnd/max(max(Xbnd));
 % Xbnd = [Xbnd;3*(rand(3500,dim)*2-1)];
-[Xbnd,~] = GLgn_pts(-3*ones(1,dim),3*ones(1,dim),7);
+[Xbnd,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),7);
+Xbnd = [Xbnd;2*(rand(1000,dim)*2-1)];
 % Xbnd=1*Xbnd(sqrt(sum(Xbnd.^2,2))>1.5*rad,:);
 [size(Xbnd),length(lam)]
 removeind=[];
@@ -132,34 +133,37 @@ end
 
 % keyboard
 %%
-pnfit = 10*pn/max(pn);
-normlogpn = log(pnfit);
+factconst = max(pn)/10;
+pnfit = pn/factconst;
+logpnfit = log(pnfit);
 
-[~,ind]=sort(pn(:),1,'descend');
-ppn=log(pn(ind));
-AAn=A(ind,:);
-ppn=ppn(:);
+% [~,ind]=sort(pnfit(:),1,'descend');
+% logppnfit=log(pnfit(ind));
+% AAn=A(ind,:);
+% logppnfit=logppnfit(:);
 
 
 
 lamdim=length(lam);
-K = -5*ones(size(Dineq,1),1);
+K = -1*ones(size(Dineq,1),1);
 KK=K;
 DD=Dineq;
-AAAn=AAn(1:15,:);
-pppn = ppn(1:15);
-lenconstr = length(normlogpn);
+Atop=A(1:15,:);
+logpntop = logpnfit(1:15);
+lenconstr = length(logpnfit);
 
 % %working good
+%     minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
 cvx_begin
     variables t2(15) t(lenconstr) lam2(lamdim)
-    minimize( 1*norm(lam2,1)+100*norm(t,2)+100*norm(t2,2))
+    minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
     subject to
     DD*lam2 <= KK  
-    A*lam2==logpn+t
-    AAAn*lam2==pppn+t2
+    A*lam2==logpnfit+t
+    Atop*lam2==logpntop+t2
 cvx_end
 
+lam2(1) = lam2(1)+log(factconst);
 lamsol = lam2;
 
 % keyboard
@@ -238,9 +242,12 @@ title(['time step = ',num2str(Tk)])
 %% marginal 0I 2D plots
 % keyboard
 
-plotmargs=0;
+plotmargs=1;
 
 if plotmargs == 1
+    ind = sqrt(sum(Xnmctest.^2,2))<2.3;
+    Xnmctest=Xnmctest(ind,:);
+    
     [Xx,Xy]=meshgrid(linspace(-1.5,1.5,25),linspace(-1.5,1.5,25) );
     % Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
     margprobs = zeros(size(Xx));
@@ -298,6 +305,7 @@ disp('Done marg')
 
 
 disp('Debug Stats-----')
+stats.k=Tk;
 stats.detPsqrt=det(Psqrt);
 stats.min_pn=min(pn);
 stats.max_pn=max(pn);
