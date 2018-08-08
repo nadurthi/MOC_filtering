@@ -1,4 +1,4 @@
-function [Y,probsY]=MeasUpdt_character(X,probs,z,model)
+function [Y,probsY]=MeasUpdt_character(X,probs,mquad,Pquad,Nm,Tk,z,model)
 % the filter is implemented always using discrete - discrete models
 
 probsXp = zeros(size(probs));
@@ -8,28 +8,14 @@ end
 
 %% Estimate normalizing constant
 
-probsXp=probsXp/sum(probsXp);
-
-[pdf,~] = get_interp_pdf(X,probsXp,4);
-
-try
-normpdf = normalize_exp_pdf(pdf,X,'dummyMC');
-catch
-    keyboard
-end
-
-
+[pdfnorm,pdftransF] = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,[])
+y=pdftransF.trueX2normY(X);
+py=pdfnorm.func(y);
+probsY=pdftransF.normprob2trueprob(py);
 %% Re-sample/ regenerate points
 
-Y=X;
+[Y,w] = GH_points(mquad,0.5^2*Pquad,5);
+
 probsY=normpdf.func(Y);
 
-% probsX=normpdf.func(X);
-% [m,Px] = MeanCov(X,probsX/sum(probsX));
-% Stdx=10*sqrtm(Px);
-% [x1,x2]=meshgrid(linspace(m(1)-Stdx(1),m(1)+Stdx(1),model.Ngrid),linspace(m(2)-Stdx(2),m(2)+Stdx(2),model.Ngrid));
-% 
-% a=model.a;
-% b=model.b;
-% Y=[reshape(x1, a*b,1 ),reshape(x2, a*b,1 )];
-% probsY=normpdf.func(Y);
+

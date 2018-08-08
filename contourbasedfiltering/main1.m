@@ -55,7 +55,7 @@ model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 %% generate truth
 
-x0=[7000,5000,2.0,4.4]';
+x0=[7000,5000,1.0,3.4]';
 [ r, v, Ehat ] = FnG(0, time.dt, [x0(1:2);0], [x0(3:4);0], 1);
 [ r1, v1, Ehat ] = FnG(0, time.dt, r, -v, 1);
 
@@ -77,7 +77,7 @@ axis equal
 
 
 % plotting the propagatin of MC
-Nmc=100;
+Nmc=2000;
 XMC=zeros(Nmc,model.fn,time.Ntsteps);
 XMC(:,:,1)=mvnrnd(x0',P0,Nmc);
 for i=1:Nmc
@@ -98,7 +98,7 @@ end
 
 %% comparing with UKF and particle filter
 
-xf0 = mvnrnd(x0,P0);
+xf0 = x0;
 Pf0 = P0;
 
 Npf = 5000; %paricle filter points
@@ -134,15 +134,15 @@ Sphere4Dpoints = sphere4Dm(4);
 Dirmats{3}=6*Sphere4Dpoints;
 
 X=[Dirmats{1};Dirmats{2};Dirmats{3}]; %1sigma, 3 sigma and 6sigma
-% [X,w] = GH_points(zeros(4,1),eye(4),5);
+[X,w] = GH_points(zeros(4,1),0.5^2*eye(4),5);
 
-[X,w] = mvnrnd(zeros(4,1),eye(4),500);
+% [X,w] = mvnrnd(zeros(4,1),eye(4),500);
 
 A=sqrt(Pf0);
 for i=1:size(X,1)
-    X(i,:) = A*X(i,:)'+xf0';
+    X(i,:) = A*X(i,:)'+xf0(:);
 end
-probs = mvnpdf(X,xf0,Pf0);
+probs = mvnpdf(X,xf0(:)',Pf0);
 
 figure
 plot3(X(:,1),X(:,2),X(:,3),'r+')
@@ -154,20 +154,20 @@ plot(X(:,1),X(:,2),'r+')
 Xinitial = X;
 probsinitial = probs;
 
-[Xquad,wquad]=UT_sigmapoints(xf0,Pf0,2);
-probs_quad = mvnpdf(Xquad,xf0,Pf0);
+[Xquad,wquad]=UT_sigmapoints(xf0(:),Pf0,2);
+probs_quad = mvnpdf(Xquad,xf0(:)',Pf0);
 
 
 
 %% run filter
-close all
+% close all
 
 X = Xinitial;
 probs = probsinitial;
 
 meas_freq_steps = 100000;
-histXprior=cell(length(time.Ntsteps),2);
-histXpost=cell(length(time.Ntsteps),2);
+histXprior=cell(length(time.Ntsteps),6);
+histXpost=cell(length(time.Ntsteps),6);
 
 histXprior{1,1} = X;
 histXprior{1,2} = probs;
@@ -177,6 +177,10 @@ histXpost{1,2} = probs;
 
 for k=2:time.Ntsteps
     k
+    Xmctest = zeros(size(XMC,1),model.fn);
+    for ii=1:size(XMC,1)
+       Xmctest(ii,:) = XMC(ii,:,k); 
+    end
     disp([' k = ',num2str(k)])
     
     [X,probs]=propagate_character(X,probs,time.dt,time.Tvec(k),model);
@@ -184,57 +188,25 @@ for k=2:time.Ntsteps
     
     [mX,PX]=MeanCov(Xquad,wquad);
     disp(['cond = ',num2str(cond(PX))])
-    fullpdf=get_interpolated_pdf(X,probs,mX,PX,4);
-    
-    Xtestmc = mvnrnd(mX(:)',1^2*PX,1000);
-    pXtest = fullpdf.func(Xtestmc);
-    pX = fullpdf.func(X);
-    logprobtestmc =log(pXtest);
-    logprobX =log(pX);
-    figure(10)
-    plot3(X(:,1),X(:,2),log(probs),'ro',X(:,1),X(:,2),logprobX,'b+',Xtestmc(:,1),Xtestmc(:,2),logprobtestmc,'gs')
-    hold on
-    plot_nsigellip(mX(1:2),PX(1:2,1:2),1,'r',2)
-    title(['k = ',num2str(k)])
-    hold off
-%     saveas(gcf,['nonorm_by4_gh5_k_',num2str(k)],'png')
-    figure(11)
-    plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),pX,'b+',Xtestmc(:,1),Xtestmc(:,2),pXtest,'gs')
-    title(['k = ',num2str(k)])
+
+    [fullpdf,pdftransF]=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xmctest);
+
+%     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
 
     
-    
-%     [mX,PX]=MeanCov(Xquad,wquad);
-%     [Xx,Xy]=meshgrid(linspace(mX(1)-2*sqrt(PX(1,1)),mX(1)+2*sqrt(PX(1,1)),25),linspace(mX(2)-2*sqrt(PX(2,2)),mX(2)+2*sqrt(PX(2,2)),25) );
-%     Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
-%     margprobs = fullpdf.func([Xp,repmat(mX(3:4)',625,1)]);
-%     margprobs = get_2Dmarginalized_probs(Xp,1,2,X,probs,mX,PX,fullpdf,'dummyMC');
-%     margprobs=reshape(margprobs,25,25);
 %     
-%     figure(1)
-%     contour(Xx,Xy,margprobs,15)
+%     figure(11)
+%     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),pX,'b+',Xtestmc(:,1),Xtestmc(:,2),pXtest,'gs')
 %     title(['k = ',num2str(k)])
-%     hold on
-%     plot(XMC(:,1,k),XMC(:,2,k),'ro')
-%     plot(X(:,1),X(:,2),'b*')
-%     axis equal
-%     axis square
-%     hold off
-%     
-%     figure(2)
-%     surf(Xx,Xy,margprobs)
-%     title(['k = ',num2str(k)])
-%     hold on
-%     plot(XMC(:,1,k),XMC(:,2,k),'ro')
-%     plot(X(:,1),X(:,2),'b*')
-%     alpha 0.5
-%     axis equal
-%     axis square
-%     hold off
-    
+
     
     histXprior{k,1}=X;
     histXprior{k,2}=probs;
+    histXprior{k,3}=fullpdf;
+    histXprior{k,4}=pdftransF;
+
+    histXprior{k,5}=Xquad;
+    histXprior{k,6}=wquad;
     
     pause(1)
     
@@ -251,33 +223,6 @@ for k=2:time.Ntsteps
             [X,probs]=MeasUpdt_character(X,probs,zk,model);
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            [X,probs]=propagate_character(X,probs,time.dt,time.Tvec(k),model);
-            fullpdf=get_interpolated_pdf(X,probs,4);
-            
-            [mX,PX]=MeanCov(X(:,1:2),probs/sum(probs));
-            [Xx,Xy]=meshgrid(linspace(mX(1)-9*sqrt(PX(1,1)),mX(1)+9*sqrt(PX(1,1)),50),linspace(mX(2)-9*sqrt(PX(2,2)),mX(2)+9*sqrt(PX(2,2)),50) );
-            Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
-            margprobs = get_2Dmarginalized_probs(Xp,1,2,X,probs,fullpdf,'dummyMC');
-            margprobs=reshape(margprobs,25,25);
-            
-            figure(3)
-            contour(Xx,Xy,margprobs)
-            title(['k = ',num2str(k)])
-            hold on
-            plot(X(:,1),X(:,2),'b*')
-            axis equal
-            axis square
-            hold off
-            
-            figure(4)
-            surf(Xx,Xy,margprobs)
-            title(['k = ',num2str(k)])
-            hold on
-            plot(X(:,1),X(:,2),'b*')
-            alpha 0.5
-            axis equal
-            axis square
-            hold off
             
         end
     end
@@ -285,8 +230,10 @@ for k=2:time.Ntsteps
     histXpost{k,1}=X;
     histXpost{k,2}=probs;
 %     if k==12
-
-keyboard
+        
+        keyboard
 %     end
     
 end
+
+% save('sim1.mat') 
