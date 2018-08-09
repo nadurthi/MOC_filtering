@@ -1,0 +1,27 @@
+function [Y,probsY]=MeasUpdt_character(normpdfX,X,probs,mquad,Pquad,Nm,Tk,z,model)
+% the filter is implemented always using discrete - discrete models
+logprobs = log(probs);
+normpdfXmodf = normpdfX;
+normpdfXmodf.func = @(xtrue)eval_exppdf_from_normpdf(xtrue,normpdfX);
+
+pz1 = integrate_func_exppdf_givenX(@(x)gausspdfmodeleval(z,x,model.R),normpdfXmodf,X,mquad,Pquad,'GMM_MC');
+logpz = log(pz);
+
+logprobsXp = zeros(size(probs));
+for i=1:size(X,1)
+    logprobsXp(i) = log(1/sqrt(det(2*pi*model.R)))-0.5*(z(:)-model.h(X(i,:)'))'*inv(model.R)*(z(:)-model.h(X(i,:)'))+logprobs(i)-logpz;
+end
+
+%% Estimate normalizing constant
+
+[pdfnorm,pdftransF] = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,[])
+y=pdftransF.trueX2normY(X);
+py=pdfnorm.func(y);
+probsY=pdftransF.normprob2trueprob(py);
+%% Re-sample/ regenerate points
+
+[Y,w] = GH_points(mquad,0.5^2*Pquad,5);
+
+probsY=normpdf.func(Y);
+
+

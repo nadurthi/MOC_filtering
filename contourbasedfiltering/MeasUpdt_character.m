@@ -1,35 +1,39 @@
-function [Y,probsY]=MeasUpdt_character(X,probs,z,model)
+function [Xpost_resample,probsXpost_resample]=MeasUpdt_character(normpdfX,X,probs,mquad,Pquad,Nm,Tk,z,model)
 % the filter is implemented always using discrete - discrete models
+logprobs = log(probs);
+normpdfXmodf = normpdfX;
+normpdfXmodf.func = @(xtrue)eval_exppdf_from_normpdf(xtrue,normpdfX);
 
-probsXp = zeros(size(probs));
+pz1 = integrate_func_exppdf_givenX(@(x)gausspdfmodeleval(z,x,model.R),normpdfXmodf,X,[],[],'GMM_MC');
+
+Xn=zeros(size(X));
 for i=1:size(X,1)
-    probsXp(i) = model.z_pdf(z,X(i,:)')*probs(i);
+   Xn(i,:)=normpdfX.trueX2normX(X(i,:)) ;
 end
+pz2 = integrate_func_exppdf_givenX(@(x)gausspdfmodeleval(z,normpdfX.normX2trueX(x),model.R),normpdfX,Xn,[],[],'GMM_MC');
+
+logpz = log(pz1);
+
+logprobsXpost = zeros(size(probs));
+for i=1:size(X,1)
+    logprobsXpost(i) = log(1/sqrt(det(2*pi*model.R)))-0.5*(z(:)-model.h(X(i,:)'))'*inv(model.R)*(z(:)-model.h(X(i,:)'))+logprobs(i)-logpz;
+end
+probsXpost = exp(logprobsXpost);
+
 
 %% Estimate normalizing constant
 
-probsXp=probsXp/sum(probsXp);
-
-[pdf,~] = get_interp_pdf(X,probsXp,4);
-
-try
-normpdf = normalize_exp_pdf(pdf,X,'dummyMC');
-catch
-    keyboard
-end
-
-
+pdfXpostnorm = get_interp_pdf_0I(X,probsXpost,mquad,Pquad,Nm,Tk,[]);
+y=pdfXpostnorm.trueX2normY(X);
+py=pdfXpostnorm.func(y);
+probsXpost2=pdfXpostnorm.normprob2trueprob(py);
 %% Re-sample/ regenerate points
 
-Y=X;
-probsY=normpdf.func(Y);
+[Xpost_resample,~] = GH_points(mquad,0.5^2*Pquad,5);
 
-% probsX=normpdf.func(X);
-% [m,Px] = MeanCov(X,probsX/sum(probsX));
-% Stdx=10*sqrtm(Px);
-% [x1,x2]=meshgrid(linspace(m(1)-Stdx(1),m(1)+Stdx(1),model.Ngrid),linspace(m(2)-Stdx(2),m(2)+Stdx(2),model.Ngrid));
-% 
-% a=model.a;
-% b=model.b;
-% Y=[reshape(x1, a*b,1 ),reshape(x2, a*b,1 )];
-% probsY=normpdf.func(Y);
+y=pdfXpostnorm.trueX2normY(Xpost_resample);
+py=pdfXpostnorm.func(y);
+probsXpost_resample=pdfXpostnorm.normprob2trueprob(py);
+
+
+

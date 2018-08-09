@@ -7,7 +7,7 @@ dim=size(P,2)-1;
 c=1;
 %%  method 1 using MC
 
-if strcmp(method,'dummyMC')
+if strcmp(method,'dummyMC2')
     
     m=mquad;
     Pcov=Pquad;
@@ -27,34 +27,41 @@ if strcmp(method,'GMM_MC')
     Pcov=Pquad;
     
     
-    [IDX,C] = kmeans(X, 10);
+    [IDX,C] = kmeans(X, 1);
     remclust = [];
     for i=1:size(C,1)
         [m,pR]=MeanCov(X(IDX==i,:),probest(IDX==i)/sum(probest(IDX==i)));
-        if any(eig(pR))<0
+        if any(eig(pR)<0)
             remclust=[remclust,i];
         end
     end
     C(remclust,:)=[];
     Nclust = size(C,1);
     w = ones(Nclust,1)/Nclust;
-    
-    NMC=100;
-    importpdfeval = zeros(NMC,Nclust);
-    probinteval = zeros(NMC,Nclust);
+    Ngh =4;
+    Nptscl = Ngh^dim;
+    importpdfeval = zeros(Nptscl,Nclust);
+    probinteval = zeros(Nptscl,Nclust);
     gaussclust = cell(1,Nclust);
     for i=1:Nclust
         [m,pR]=MeanCov(X(IDX==i,:),probest(IDX==i)/sum(probest(IDX==i)));
-        pR = 2^2*pR;
-        x=mvnrnd(m,pR,NMC);
-%         Xt=[Xt;x];
-        importpdfeval(:,i) = mvnpdf(x,m,pR);
+        pR = 1^2*pR;
+%         x=mvnrnd(m,pR,NMC);
+%         Xt=[Xt;x];    
+        [x,wtsq] = GH_points(m,pR,4);
+        try
+            importpdfeval(:,i) = mvnpdf(x,m(:)',pR);
+        catch
+            keyboard
+        end
         probinteval(:,i) = pdf.func(x);
         gaussclust{i} = {m,pR};
     end
+%     wtsq = ones(NMC,1); 
+    denompdfval= sum(repmat(w(:)',Nptscl,1).* importpdfeval,2);
+    denompdfval_inv = 1./denompdfval(:);
     
-    denompdfval= sum(repmat(w(:)',NMC,1).* importpdfeval,2);
-    c = sum( sum( repmat(w(:)',NMC,1).* ( (probinteval./repmat(denompdfval,1,Nclust)).*importpdfeval),2) )/N;
+    c = sum( sum( repmat(w(:)',Nptscl,1).*repmat(wtsq(:),1,Nclust).*probinteval,2)./denompdfval );
     disp(['integration constant : ',num2str(c)])
     %     keyboard
 end

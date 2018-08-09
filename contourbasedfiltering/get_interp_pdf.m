@@ -103,7 +103,7 @@ for i=1:size(C,1)
     if length(logpn(IDX==i))>dim*2
         [m,pR]=MeanCov(Xn(IDX==i,:),logpn(IDX==i)/sum(logpn(IDX==i)));
         if all(eig(pR)>0)
-            Xt=[Xt;mvnrnd(m,2^2*pR,50)];
+            Xt=[Xt;mvnrnd(m,1^2*pR,50)];
         end
     end
 end
@@ -176,20 +176,28 @@ AAAn=AAn(1:15,:);
 pppn = ppn(1:15);
 lenconstr = length(logpn);
 
+% %working good
 cvx_begin
     variables t2(15) t(lenconstr) lam2(lamdim)
-    minimize( 0.1*norm(lam2,1)+50*norm(t,2)+100*norm(t2,2))
+    minimize( 0.01*norm(lam2,1)+25*norm(t,2)+100*norm(t2,2))
     subject to
     DD*lam2 <= KK  
     A*lam2==logpn+t
     AAAn*lam2==pppn+t2
-%     t>0
-%     c<t
-%     c>-t
-%     AAn * c == ppn +t
-%     A*c>=0
 cvx_end
-         
+  
+% w = abs(probs);
+% w=w/sum(w);
+
+% cvx_begin
+%     variables t(lenconstr) lam2(lamdim)
+%     minimize( 0.001*norm(lam2,1)+500*norm(w.*t,2))
+%     subject to
+%     DD*lam2 <= KK  
+%     A*lam2==logpn+t
+% %     AAAn*lam2==pppn+t2
+% cvx_end
+
 %%
 % keyboard
 lamsol = lam2;
