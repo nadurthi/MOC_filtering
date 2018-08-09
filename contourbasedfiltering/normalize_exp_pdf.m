@@ -27,11 +27,7 @@ if strcmp(method,'GMM_MC')
     Pcov=Pquad;
     
     
-<<<<<<< HEAD
     [IDX,C] = kmeans(X, 1);
-=======
-    [IDX,C] = kmeans(X, 3);
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
     remclust = [];
     for i=1:size(C,1)
         [m,pR]=MeanCov(X(IDX==i,:),probest(IDX==i)/sum(probest(IDX==i)));
@@ -49,11 +45,7 @@ if strcmp(method,'GMM_MC')
     gaussclust = cell(1,Nclust);
     for i=1:Nclust
         [m,pR]=MeanCov(X(IDX==i,:),probest(IDX==i)/sum(probest(IDX==i)));
-<<<<<<< HEAD
         pR = 1^2*pR;
-=======
-        pR = 0.8^2*pR;
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 %         x=mvnrnd(m,pR,NMC);
 %         Xt=[Xt;x];    
         [x,wtsq] = GH_points(m,pR,4);

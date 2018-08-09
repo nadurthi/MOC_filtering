@@ -146,11 +146,7 @@ Dirmats{3}=6*Sphere4Dpoints;
 X=[Dirmats{1};Dirmats{2};Dirmats{3}]; %1sigma, 3 sigma and 6sigma
 [X,w] = GH_points(zeros(4,1),0.5^2*eye(4),5);
 
-<<<<<<< HEAD
 % [X,w] = mvnrnd(zeros(4,1),0.5*eye(4),500);
-=======
-% [X,w] = mvnrnd(zeros(4,1),eye(4),500);
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 
 A=sqrt(Pf0);
 for i=1:size(X,1)
@@ -168,13 +164,8 @@ plot(X(:,1),X(:,2),'r+')
 Xinitial = X;
 probsinitial = probs;
 
-<<<<<<< HEAD
 [Xquad_initial,wquad_initial]=UT_sigmapoints(xf0(:),Pf0,2);
 probs_quad = mvnpdf(Xquad_initial,xf0(:)',Pf0);
-=======
-[Xquad,wquad]=UT_sigmapoints(xf0(:),Pf0,2);
-probs_quad = mvnpdf(Xquad,xf0(:)',Pf0);
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 
 
 
@@ -188,13 +179,8 @@ Xquad=Xquad_initial;
 wquad=wquad_initial;
 
 meas_freq_steps = 100000;
-<<<<<<< HEAD
 histXprior=cell(length(time.Ntsteps),5);
 histXpost=cell(length(time.Ntsteps),5);
-=======
-histXprior=cell(length(time.Ntsteps),6);
-histXpost=cell(length(time.Ntsteps),6);
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 
 histXprior{1,1} = X;
 histXprior{1,2} = probs;
@@ -216,15 +202,9 @@ for k=2:time.Ntsteps
     
     [mX,PX]=MeanCov(Xquad,wquad);
     disp(['cond = ',num2str(cond(PX))])
-<<<<<<< HEAD
 %     if any(k==teststeps)
         fullpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xmctest);
 %     end
-=======
-
-    [fullpdf,pdftransF]=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xmctest);
-
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
 
     
@@ -237,16 +217,9 @@ for k=2:time.Ntsteps
     histXprior{k,1}=X;
     histXprior{k,2}=probs;
     histXprior{k,3}=fullpdf;
-<<<<<<< HEAD
 
     histXprior{k,4}=Xquad;
     histXprior{k,5}=wquad;
-=======
-    histXprior{k,4}=pdftransF;
-
-    histXprior{k,5}=Xquad;
-    histXprior{k,6}=wquad;
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
     
     pause(1)
     
@@ -269,17 +242,10 @@ for k=2:time.Ntsteps
     
     histXpost{k,1}=X;
     histXpost{k,2}=probs;
-<<<<<<< HEAD
     if k==9
         
         keyboard
     end
-=======
-%     if k==12
-        
-        keyboard
-%     end
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
     
 end
 

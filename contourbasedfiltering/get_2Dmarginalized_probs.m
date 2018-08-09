@@ -32,11 +32,7 @@ if strcmp(method,'ClusterMC')
 %     Pcov=Pquad;
     
     
-<<<<<<< HEAD
     [IDX,C] = kmeans(X, 1);
-=======
-    [IDX,C] = kmeans(X, 2);
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
     remclust = [];
     for i=1:size(C,1)
         [m,pR]=MeanCov(X(IDX==i,:),probest(IDX==i)/sum(probest(IDX==i)));
@@ -55,11 +51,7 @@ if strcmp(method,'ClusterMC')
     gaussclust = cell(1,Nclust);
     for i=1:Nclust
         [m,pR]=MeanCov(X(IDX==i,:),probest(IDX==i)/sum(probest(IDX==i)));
-<<<<<<< HEAD
         pR = 2^2*pR;
-=======
-        pR = 1.5^2*pR;
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
         mmarg = m(margcols);
         mkeep = m(keepcols);
         
@@ -94,11 +86,7 @@ if strcmp(method,'ClusterMC')
 end
 
 
-<<<<<<< HEAD
 if strcmp(method,'GMM_MC2')
-=======
-if strcmp(method,'GMM_MC')
->>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
     
     probest = fullpdf.func(X);
     probest=probest/sum(probest);
