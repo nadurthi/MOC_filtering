@@ -187,7 +187,7 @@ histXprior{1,2} = probs;
 
 histXpost{1,1} = X;
 histXpost{1,2} = probs;
-teststeps = [15,16,19,22,23,25,29,35,36,37,38,39,40,41,42,43,44,46,47,49];
+teststeps = [18,19];
 
 for k=2:time.Ntsteps
     k
@@ -242,10 +242,10 @@ for k=2:time.Ntsteps
     
     histXpost{k,1}=X;
     histXpost{k,2}=probs;
-    if k==9
-        
-        keyboard
-    end
+%     if any(k==teststeps)
+%         
+%         keyboard
+%     end
     
 end
 

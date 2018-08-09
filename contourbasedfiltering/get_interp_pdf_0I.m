@@ -110,9 +110,9 @@ Xbnd=[]
 % Xbnd=GH_points(zeros(dim,1),eye(dim),6);
 % Xbnd=3*Xbnd/max(max(Xbnd));
 % Xbnd = [Xbnd;3*(rand(3500,dim)*2-1)];
-[Xbnd1,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),7);
-% [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),6);
-% Xbnd2=3*(rand(2000,dim)*2-1);
+[Xbnd1,~] = GLgn_pts(-2.5*ones(1,dim),2.5*ones(1,dim),8);
+% [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),8);
+% Xbnd2=2*(rand(5000,dim)*2-1);
 Xbnd = [Xbnd1;[]];
 % Xbnd=1*Xbnd(sqrt(sum(Xbnd.^2,2))>1.5*rad,:);
 [size(Xbnd),length(lam)]
@@ -170,13 +170,13 @@ lenconstr = length(logpnfit);
 
 % %working good
 %     minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
-CC=[150];
+CC=[2];
 LAMS=zeros(lamdim,length(CC));
 costs = zeros(1,length(CC));
 for ci = 1:length(CC)
     cvx_begin
         variables t2(15) t(lenconstr) lam2(lamdim)
-        minimize( 1*norm(lam2,1)+10*norm(t,2)+25*norm(t2,2))
+        minimize( CC(ci)*norm(lam2,1)+20*norm(t,2)+50*norm(t2,2))
         subject to
         DD*lam2 <= KK  
         A*lam2==logpnfit+t
