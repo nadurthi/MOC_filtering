@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 function pdfnorm = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,Xmctest)
+=======
+function [pdfnorm,pdftransF] = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,Xmctest)
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 %%
 dim =size(X,2);
 % 
@@ -11,16 +15,22 @@ P=Pquad/c;
 N=size(X,1);
 
 Z=zeros(size(X));
+<<<<<<< HEAD
 if isempty(Xmctest)==0
     Zmctest = zeros(size(Xmctest));
     Nmctest = size(Xmctest,1);
 end
+=======
+Zmctest = zeros(size(Xmctest));
+Nmctest = size(Xmctest,1);
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 
 Psqrt=sqrtm(P);
 Psqrt_inv=inv(sqrtm(P));
 for i=1:N
     Z(i,:)=Psqrt_inv*(X(i,:)-m')';
 end
+<<<<<<< HEAD
 if isempty(Xmctest)==0
     for i=1:Nmctest
         Zmctest(i,:)=Psqrt_inv*(Xmctest(i,:)-m')';
@@ -48,16 +58,47 @@ if isempty(Xmctest)==0
     end
 end
 
+=======
+for i=1:Nmctest
+    Zmctest(i,:)=Psqrt_inv*(Xmctest(i,:)-m')';
+end
+
+pn=probs*det(Psqrt);
+
+% remove points outside 10-sigma
+ind = sqrt(sum(Z.^2,2))<10*sqrt(c);
+Z=Z(ind,:);
+pn=pn(ind);
+N=size(Z,1);
+
+% do hyopercube scalling
+mn = min(Z,[],1);
+Xn=zeros(size(Z));
+Xnmctest=zeros(size(Zmctest));
+for i=1:N
+    Xn(i,:)=Z(i,:)-mn;
+end
+for i=1:Nmctest
+    Xnmctest(i,:)=Zmctest(i,:)-mn;
+end
+
+
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 mx = max(Xn,[],1);
 Atransf=diag(2./mx);
 mulin = -2*mn(:)./mx(:)-1;
 for i=1:N
     Xn(i,:)=Atransf*Xn(i,:)'-1;
 end
+<<<<<<< HEAD
 if isempty(Xmctest)==0
     for i=1:Nmctest
         Xnmctest(i,:)=Atransf*Xnmctest(i,:)'-1;
     end
+=======
+for i=1:Nmctest
+    Xnmctest(i,:)=Atransf*Xnmctest(i,:)'-1;
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 end
 
 detAtransf = det(Atransf);
@@ -101,7 +142,10 @@ toc
 % evaluate_polyND_3(Pf{65},Xn(11,:))
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 
 %% reguralization points
 rad=max(sqrt(sum(Xn.^2,2)));
@@ -110,10 +154,15 @@ Xbnd=[]
 % Xbnd=GH_points(zeros(dim,1),eye(dim),6);
 % Xbnd=3*Xbnd/max(max(Xbnd));
 % Xbnd = [Xbnd;3*(rand(3500,dim)*2-1)];
+<<<<<<< HEAD
 [Xbnd1,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),7);
 % [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),6);
 % Xbnd2=3*(rand(2000,dim)*2-1);
 Xbnd = [Xbnd1;[]];
+=======
+[Xbnd,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),7);
+Xbnd = [Xbnd;2*(rand(1000,dim)*2-1)];
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 % Xbnd=1*Xbnd(sqrt(sum(Xbnd.^2,2))>1.5*rad,:);
 [size(Xbnd),length(lam)]
 removeind=[];
@@ -122,7 +171,11 @@ for i=1:size(Xbnd,1)
    x = Xn(Idx,:);
    mr = mean(x,1);
    r  = max(sqrt(sum((x - repmat(mr,size(x,1),1)).^2)));
+<<<<<<< HEAD
    if norm(Xbnd(i,:)-mr)<2*r
+=======
+   if norm(Xbnd(i,:)-mr)<1*r
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
        removeind=[removeind,i];
    end
 end
@@ -141,6 +194,7 @@ for r=1:1:M
    Dineq(r,:) = evaluate_MatrixOfPolys(Pf,Xbnd(r,:));
 end
 
+<<<<<<< HEAD
 
 [Xmax,~] = GLgn_pts(-1*ones(1,dim),1*ones(1,dim),7);
 Tineq = zeros(size(Xmax,1),length(Pf));
@@ -148,6 +202,9 @@ for r=1:1:size(Xmax,1)
    Tineq(r,:) = evaluate_MatrixOfPolys(Pf,Xmax(r,:));
 end
 
+=======
+% keyboard
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 %%
 factconst = max(pn)/10;
 pnfit = pn/factconst;
@@ -161,7 +218,11 @@ logpnfit = log(pnfit);
 
 
 lamdim=length(lam);
+<<<<<<< HEAD
 K = (min(logpnfit)-1)*ones(size(Dineq,1),1);
+=======
+K = -1*ones(size(Dineq,1),1);
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 KK=K;
 DD=Dineq;
 Atop=A(1:15,:);
@@ -170,6 +231,7 @@ lenconstr = length(logpnfit);
 
 % %working good
 %     minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
+<<<<<<< HEAD
 CC=[150];
 LAMS=zeros(lamdim,length(CC));
 costs = zeros(1,length(CC));
@@ -188,6 +250,17 @@ for ci = 1:length(CC)
 end
 [~,bind] = min(costs);
 lam2 = LAMS(:,bind);
+=======
+cvx_begin
+    variables t2(15) t(lenconstr) lam2(lamdim)
+    minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
+    subject to
+    DD*lam2 <= KK  
+    A*lam2==logpnfit+t
+    Atop*lam2==logpntop+t2
+cvx_end
+
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 lam2(1) = lam2(1)+log(factconst);
 lamsol = lam2;
 
@@ -211,6 +284,7 @@ pdfnorm.type = 'true-0I-hypercube-11';
 pdfnorm = normalize_exp_pdf(pdfnorm,Xn,mquad,Pquad,'GMM_MC');
 
 
+<<<<<<< HEAD
 pdfnorm.trueX2normX = @(x)affineTransform(x,Atransf*Psqrt_inv,-Atransf*Psqrt_inv*mquad(:)+mulin(:));
 pdfnorm.normX2trueX = @(xn)affineTransform(xn,Psqrt*inv(Atransf),mquad(:)-Psqrt*inv(Atransf)*mulin(:));
 pdfnorm.normprob2trueprob = @(p)p/det(Psqrt*inv(Atransf));
@@ -219,6 +293,16 @@ pdfnorm.minx = mn;
 pdfnorm.maxx = mx;
 pdfnorm.Pquad = Pquad;
 pdfnorm.mquad = mquad;
+=======
+pdftransF.trueX2normY = @(x)affineTransform(x,Atransf*Psqrt_inv,-Atransf*Psqrt_inv*mquad(:)+mulin(:));
+pdftransF.normX2trueX = @(xn)affineTransform(xn,Psqrt*inv(Atransf),mquad(:)-Psqrt*inv(Atransf)*mulin(:));
+pdftransF.normprob2trueprob = @(p)p/det(Psqrt*inv(Atransf));
+% pdftransF.trueprob2normprob = @(p)p/detAtransf;
+pdftransF.minx = mn;
+pdftransF.maxx = mx;
+pdftransF.Pquad = Pquad;
+pdftransF.mquad = mquad;
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 % pdftransF.Xnorm0I2Xnorm11 = @(xn)Xnorm0I2Xnorm11(xn,minx,maxx,mquad,Pquad);
 % pdftransF.Xnorm112Xnorm0I = @(xn)Xnorm112Xnorm0I(xn,minx,maxx,mquad,Pquad);
 
@@ -233,7 +317,11 @@ for i=1:size(C,1)
     if length(logpn(IDX==i))>dim*2
         [m,pR]=MeanCov(Xn(IDX==i,:),pn(IDX==i)/sum(pn(IDX==i)));
         if all(eig(pR)>0)
+<<<<<<< HEAD
             Xt=[Xt;mvnrnd(m,4^2*pR,200)];
+=======
+            Xt=[Xt;mvnrnd(m,3^2*pR,200)];
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
         end
     end
 end
@@ -258,10 +346,17 @@ lgpnest=pdfnorm.polyeval(Xn);
 % lgpt(lgpt>max(logpn))=-10;
 figure(33)
 plot3(Xn(:,1),Xn(:,2),log(pn),'ro',Xn(:,1),Xn(:,2),lgpnest,'b+',Xt(:,1),Xt(:,2),lgpt,'gs')
+<<<<<<< HEAD
 title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
 figure(34)
 plot3(Xn(:,1),Xn(:,2),pn,'ro',Xn(:,1),Xn(:,2),exp(lgpnest),'b+',Xt(:,1),Xt(:,2),exp(lgpt),'gs',Xbnd(:,1),Xbnd(:,2),exp(lgbnd),'k*')
 title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
+=======
+title(['time step = ',num2str(Tk)])
+figure(34)
+plot3(Xn(:,1),Xn(:,2),pn,'ro',Xn(:,1),Xn(:,2),exp(lgpnest),'b+',Xt(:,1),Xt(:,2),exp(lgpt),'gs',Xbnd(:,1),Xbnd(:,2),exp(lgbnd),'k*')
+title(['time step = ',num2str(Tk)])
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 % plot_nsigellip(,1,'r',2);
 
 %% marginal 0I 2D plots
@@ -270,6 +365,7 @@ title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
 plotmargs=1;
 
 if plotmargs == 1
+<<<<<<< HEAD
     if isempty(Xmctest)==0
         ind = sqrt(sum(Xnmctest.^2,2))<2.3;
         Xnmctest=Xnmctest(ind,:);
@@ -329,6 +425,55 @@ disp('Done marg')
 
 %%
 
+=======
+    ind = sqrt(sum(Xnmctest.^2,2))<2.3;
+    Xnmctest=Xnmctest(ind,:);
+    
+    [Xx,Xy]=meshgrid(linspace(-1.5,1.5,25),linspace(-1.5,1.5,25) );
+    % Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
+    margprobs = zeros(size(Xx));
+    for i=1:size(Xx,1)
+        for j=1:size(Xx,2)
+            margprobs(i,j) = get_2Dmarginalized_probs([Xx(i,j),Xy(i,j)],1,2,Xn,pn,NaN,NaN,pdfnorm,'ClusterMC');
+        end
+    end
+
+
+    figure(1)
+    contour(Xx,Xy,margprobs,15)
+    hold on
+    plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
+%     plot(Xt(:,1),Xt(:,2),'g*')
+    title(['time step = ',num2str(Tk)])
+    xlabel('x')
+    ylabel('y')
+    axis equal
+    axis square
+    hold off
+    saveas(gcf,['sim1sat/contour_',num2str(Tk)],'png')
+    saveas(gcf,['sim1sat/contour_',num2str(Tk)],'fig')
+    
+    figure(2)
+    surf(Xx,Xy,margprobs)
+    alpha 0.4
+    hold on
+    plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
+%     plot(Xt(:,1),Xt(:,2),'g*')
+    title(['time step = ',num2str(Tk)])
+    xlabel('x')
+    ylabel('y')
+    axis equal
+    axis square
+    hold off
+    saveas(gcf,['sim1sat/surf_',num2str(Tk)],'png')
+    saveas(gcf,['sim1sat/surf_',num2str(Tk)],'fig')
+
+end
+disp('Done marg')
+
+%%
+
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 % mxentpoly=linear_transform_poly(mxentpoly_norm,Psqrt_inv,-Psqrt_inv*m(:));
 % 
 % 

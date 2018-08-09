@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 function [Xpost_resample,probsXpost_resample]=MeasUpdt_character(normpdfX,X,probs,mquad,Pquad,Nm,Tk,z,model)
+=======
+function [Y,probsY]=MeasUpdt_character(X,probs,mquad,Pquad,Nm,Tk,z,model)
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
 % the filter is implemented always using discrete - discrete models
 logprobs = log(probs);
 normpdfXmodf = normpdfX;
@@ -23,6 +27,7 @@ probsXpost = exp(logprobsXpost);
 
 %% Estimate normalizing constant
 
+<<<<<<< HEAD
 pdfXpostnorm = get_interp_pdf_0I(X,probsXpost,mquad,Pquad,Nm,Tk,[]);
 y=pdfXpostnorm.trueX2normY(X);
 py=pdfXpostnorm.func(y);
@@ -37,3 +42,16 @@ probsXpost_resample=pdfXpostnorm.normprob2trueprob(py);
 
 
 
+=======
+[pdfnorm,pdftransF] = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,[])
+y=pdftransF.trueX2normY(X);
+py=pdfnorm.func(y);
+probsY=pdftransF.normprob2trueprob(py);
+%% Re-sample/ regenerate points
+
+[Y,w] = GH_points(mquad,0.5^2*Pquad,5);
+
+probsY=normpdf.func(Y);
+
+
+>>>>>>> 645ba8dbc66b41c38df302963ebd877cb1f1e349
