@@ -8,50 +8,26 @@ clear
 format longg
 
 digits(50)
-%% constants
-constants.radii=[6378.137,6378.137,6378.137];
-
-constants.mu      = 3.986004418e5;     % Gravitational Const
-constants.Re      = constants.radii(1);          % Earth radius (km)
-
-constants.g0   = 9.8065;            % Sea-level acceleration, (m/s^2)
-
-% Canonical Units
-constants.muCan   = 1;
-constants.RU      = constants.Re;
-constants.TU      = sqrt(constants.RU^3 / constants.mu);
-constants.VU      = constants.RU/constants.TU;
-
-constants.trueA2normA=(constants.TU^2/constants.RU);
-constants.normA2trueA=(constants.RU/constants.TU^2);
-
-constants.trueV2normV=(constants.TU/constants.RU);
-constants.normV2trueV=(constants.RU/constants.TU);
-
-constants.trueX2normX=(1/constants.RU);
-constants.normX2trueX=(constants.RU);
-
-constants.trueT2normT=(1/constants.TU);
-constants.normT2trueT=(constants.TU);
 
 %% time
 
 
-time.t0=0 *constants.trueT2normT;
-time.tf=48*60*60 *constants.trueT2normT;
-time.dt=1*60*60 *constants.trueT2normT;
+time.t0=0;
+time.tf=500;
+time.dt=5;
 
 time.Tvec=time.t0:time.dt:time.tf;
 time.Ntsteps=length(time.Tvec);
 
 %% models
 
-model.f=@(dt,tk,xk)processmodel_2body_2D(dt,1,tk,xk);
-model.fn=4;
+model.f=@(dt,tk,xk)duff_prop_model(dt,xk);
+model.fn=2;
 
-model.h=@(x)radmodel_2D(x);
-model.hn=2;
-model.R=diag([0.1^2,(5*pi/180)^2]);
+model.h=@(x)radmodel_2D(x,1);
+model.hn=1;
+% model.R=diag([(0.1/constants.Re)^2,(0.5*pi/180)^2]);
+model.R=diag([(0.1/constants.Re)^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 
@@ -107,8 +83,8 @@ end
 % end
 
 %% comparing with UKF and particle filter
-
-xf0 = x0;
+xf0=mvnrnd(x0(:)',P0);
+% xf0 = x0;
 Pf0 = P0;
 
 Npf = 5000; %paricle filter points
@@ -180,7 +156,8 @@ probs = probsinitial;
 Xquad=Xquad_initial;
 wquad=wquad_initial;
 
-meas_freq_steps = 100000;
+meas_freq_steps = 5;
+
 histXprior=cell(length(time.Ntsteps),5);
 histXpost=cell(length(time.Ntsteps),5);
 
@@ -205,7 +182,7 @@ for k=2:time.Ntsteps
     [mX,PX]=MeanCov(Xquad,wquad);
     disp(['cond = ',num2str(cond(PX))])
 %         if any(k==teststeps)
-    fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xmctest);
+    fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xtruth(k,:));
 %         end
     %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
     
@@ -225,25 +202,31 @@ for k=2:time.Ntsteps
     
     pause(1)
     
-    zk = model.h(Xtruth(k,:)')+sqrtm(model.R)*randn(model.hn,1);
-    zk
+    
     
     
     % do measurement update
-    if k>2
+    if k>=2
         if rem(k,meas_freq_steps)==0
             disp("doing meas update")
+            zk = model.h(Xtruth(k,:)')+sqrtm(model.R)*randn(model.hn,1);
+            zk
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
-            [X,probs]=MeasUpdt_character(X,probs,zk,model);
+            [X,probs,Xquad,wquad,fullnormpdf]=MeasUpdt_character(fullnormpdf,X,probs,Xquad,wquad,4,k,zk,model,Xtruth(k,:));
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
+            histXpost{k,1}=X;
+            histXpost{k,2}=probs;
+            histXpost{k,3}=fullnormpdf;
+
+            histXpost{k,4}=Xquad;
+            histXpost{k,5}=wquad;
+    
             
         end
     end
     
-    histXpost{k,1}=X;
-    histXpost{k,2}=probs;
+
     
     y=fullnormpdf.trueX2normX(X);
     py=fullnormpdf.func(y);
@@ -254,7 +237,7 @@ for k=2:time.Ntsteps
     
 %         if any(k==teststeps)
     
-    keyboard
+%     keyboard
 %         end
     
     

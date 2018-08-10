@@ -110,10 +110,10 @@ Xbnd=[]
 % Xbnd=GH_points(zeros(dim,1),eye(dim),6);
 % Xbnd=3*Xbnd/max(max(Xbnd));
 % Xbnd = [Xbnd;3*(rand(3500,dim)*2-1)];
-[Xbnd1,~] = GLgn_pts(-3*ones(1,dim),3*ones(1,dim),7);
-% [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),6);
-Xbnd2=3*(rand(2000,dim)*2-1);
-Xbnd = [Xbnd1;Xbnd2];
+[Xbnd1,~] = GLgn_pts(-2.5*ones(1,dim),2.5*ones(1,dim),8);
+% [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),8);
+% Xbnd2=2*(rand(5000,dim)*2-1);
+Xbnd = [Xbnd1;[]];
 % Xbnd=1*Xbnd(sqrt(sum(Xbnd.^2,2))>1.5*rad,:);
 [size(Xbnd),length(lam)]
 removeind=[];
@@ -141,21 +141,11 @@ for r=1:1:M
    Dineq(r,:) = evaluate_MatrixOfPolys(Pf,Xbnd(r,:));
 end
 
-Xt=[];
-[IDX,C] = kmeans(Xn, 10);
-for i=1:size(C,1)
-    if length(logpn(IDX==i))>dim*2
-        [m,pR]=MeanCov(Xn(IDX==i,:),pn(IDX==i)/sum(pn(IDX==i)));
-        if all(eig(pR)>0)
-            Xt=[Xt;mvnrnd(m,4^2*pR,200)];
-        end
-    end
-end
-NMC=size(Xt,1);
 
-Tineq = zeros(NMC,length(Pf));
-for r=1:1:NMC
-   Tineq(r,:) = evaluate_MatrixOfPolys(Pf,Xt(r,:));
+[Xmax,~] = GLgn_pts(-1*ones(1,dim),1*ones(1,dim),7);
+Tineq = zeros(size(Xmax,1),length(Pf));
+for r=1:1:size(Xmax,1)
+   Tineq(r,:) = evaluate_MatrixOfPolys(Pf,Xmax(r,:));
 end
 
 %%
@@ -180,13 +170,13 @@ lenconstr = length(logpnfit);
 
 % %working good
 %     minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
-CC=[100];
+CC=[2];
 LAMS=zeros(lamdim,length(CC));
 costs = zeros(1,length(CC));
 for ci = 1:length(CC)
     cvx_begin
         variables t2(15) t(lenconstr) lam2(lamdim)
-        minimize( 10*norm(lam2,1)+50*norm(t,2)+CC(ci)*norm(t2,2))
+        minimize( CC(ci)*norm(lam2,1)+20*norm(t,2)+50*norm(t2,2))
         subject to
         DD*lam2 <= KK  
         A*lam2==logpnfit+t
@@ -237,7 +227,17 @@ pdfnorm.mquad = mquad;
 %% [pltiing and testing
 % keyboard
 
-
+Xt=[];
+[IDX,C] = kmeans(Xn, 10);
+for i=1:size(C,1)
+    if length(logpn(IDX==i))>dim*2
+        [m,pR]=MeanCov(Xn(IDX==i,:),pn(IDX==i)/sum(pn(IDX==i)));
+        if all(eig(pR)>0)
+            Xt=[Xt;mvnrnd(m,4^2*pR,200)];
+        end
+    end
+end
+NMC=size(Xt,1);
 % NMC = 3000;
 % Xt = [mvnrnd(zeros(dim,1),0.001^2*eye(dim),NMC/3);mvnrnd(zeros(dim,1),0.1^2*eye(dim),NMC/3);mvnrnd(zeros(dim,1),1.5^2*eye(dim),NMC/3)];
 % At=zeros(NMC,length(Pf));
@@ -265,8 +265,9 @@ title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
 % plot_nsigellip(,1,'r',2);
 
 %% marginal 0I 2D plots
-% keyboard
+keyboard
 
+for i=1:size(Xn,1)
 plotmargs=1;
 
 if plotmargs == 1
@@ -275,7 +276,7 @@ if plotmargs == 1
         Xnmctest=Xnmctest(ind,:);
     end
     
-    [Xx,Xy]=meshgrid(linspace(-1.5,1.5,25),linspace(-1.5,1.5,25) );
+    [Xx,Xy]=meshgrid(linspace(-2,2,25),linspace(-2,2,25) );
     % Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
     margprobs = zeros(size(Xx));
     margprobs_cell = cell(size(Xx,1),1);
@@ -288,7 +289,15 @@ if plotmargs == 1
     for i=1:size(Xx,1)
         margprobs(i,:) = margprobs_cell{i};
     end
-
+%     Xxtrue = zeros(size(Xx));
+%     Xytrue = zeros(size(Xx));
+%     margprobs_true = zeros(size(margprobs));
+%     for i=1:size(Xx,1)
+%         for j=1:size(Xx,2)
+%             Xxtrue(i,j)
+%         end
+%     end
+    
     figure(1)
     contour(Xx,Xy,margprobs,15)
     hold on

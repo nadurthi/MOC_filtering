@@ -142,7 +142,7 @@ for r=1:1:M
 end
 
 
-[Xmax,~] = GLgn_pts(-1*ones(1,dim),1*ones(1,dim),7);
+[Xmax,~] = GLgn_pts(-1*ones(1,dim),1*ones(1,dim),8);
 Tineq = zeros(size(Xmax,1),length(Pf));
 for r=1:1:size(Xmax,1)
    Tineq(r,:) = evaluate_MatrixOfPolys(Pf,Xmax(r,:));
@@ -170,7 +170,7 @@ lenconstr = length(logpnfit);
 
 % %working good
 %     minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
-CC=[2];
+CC=[0.5];
 LAMS=zeros(lamdim,length(CC));
 costs = zeros(1,length(CC));
 for ci = 1:length(CC)
@@ -267,6 +267,12 @@ title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
 %% marginal 0I 2D plots
 % keyboard
 
+
+% Xtrasf=pdfnorm.normX2trueX(Xn) ;
+% 
+% figure
+% plot(X(:,1),X(:,2),'ro',Xtrasf(:,1),Xtrasf(:,2),'b+')
+
 plotmargs=1;
 
 if plotmargs == 1
@@ -288,7 +294,15 @@ if plotmargs == 1
     for i=1:size(Xx,1)
         margprobs(i,:) = margprobs_cell{i};
     end
-
+%     Xxtrue = zeros(size(Xx));
+%     Xytrue = zeros(size(Xx));
+%     margprobs_true = zeros(size(margprobs));
+%     for i=1:size(Xx,1)
+%         for j=1:size(Xx,2)
+%             Xxtrue(i,j)
+%         end
+%     end
+    
     figure(1)
     contour(Xx,Xy,margprobs,15)
     hold on

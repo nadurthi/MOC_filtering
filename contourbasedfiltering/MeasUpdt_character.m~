@@ -1,27 +1,49 @@
-function [Y,probsY]=MeasUpdt_character(normpdfX,X,probs,mquad,Pquad,Nm,Tk,z,model)
+function [Xpost_resample,probsXpost_resample]=MeasUpdt_character(normpdfX,X,probs,mquad,Pquad,Nm,Tk,z,model,Xmc)
 % the filter is implemented always using discrete - discrete models
 logprobs = log(probs);
 normpdfXmodf = normpdfX;
 normpdfXmodf.func = @(xtrue)eval_exppdf_from_normpdf(xtrue,normpdfX);
 
-pz1 = integrate_func_exppdf_givenX(@(x)gausspdfmodeleval(z,x,model.R),normpdfXmodf,X,mquad,Pquad,'GMM_MC');
-logpz = log(pz);
+% pz1 = integrate_func_exppdf_givenX(@(x)measmodeleval(z,x,model),normpdfXmodf,X,[],[],'GMM_MC');
 
-logprobsXp = zeros(size(probs));
+Xn=normpdfX.trueX2normX(X(i,:)) ;
+
+pz2 = integrate_func_exppdf_givenX(@(x)gausspdfmodeleval(z,normpdfX.normX2trueX(x),model.R),normpdfX,Xn,[],[],'GMM_MC');
+
+logpz = log(pz2);
+
+logprobsXpost = zeros(size(probs));
 for i=1:size(X,1)
-    logprobsXp(i) = log(1/sqrt(det(2*pi*model.R)))-0.5*(z(:)-model.h(X(i,:)'))'*inv(model.R)*(z(:)-model.h(X(i,:)'))+logprobs(i)-logpz;
+    logprobsXpost(i) = log(1/sqrt(det(2*pi*model.R)))-0.5*(z(:)-model.h(X(i,:)'))'*inv(model.R)*(z(:)-model.h(X(i,:)'))+logprobs(i)-logpz;
 end
+probsXpost = exp(logprobsXpost);
+
+%% Run ukf
+[Xq,wq]= model.quadfunc(mquad,Pquad);
+Zq=zeros(size(Xq,1),model.hn);
+for i=1:size(Xq,1)
+   Zq(i,:) = model.h(Xq(i,:)); 
+end
+[mz,Pz] = MeanCov(Zq,wq);
+Pz = Pz+model.R;
+Pcc=CrossCov(Xq,mquad,Zq,mz,wq);
+K=Pcc/Pz;
+mquad_post=mquad+K*(z(:)-mz(:));
+Pquad_post=Pquad-K*Pz*K';
 
 %% Estimate normalizing constant
 
-[pdfnorm,pdftransF] = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,[])
-y=pdftransF.trueX2normY(X);
-py=pdfnorm.func(y);
-probsY=pdftransF.normprob2trueprob(py);
+pdfXpostnorm = get_interp_pdf_0I(X,probsXpost,mquad_post,Pquad_post,Nm,Tk,Xmc);
+y=pdfXpostnorm.trueX2normX(X);
+py=pdfXpostnorm.func(y);
+probsXpost2=pdfXpostnorm.normprob2trueprob(py);
 %% Re-sample/ regenerate points
 
-[Y,w] = GH_points(mquad,0.5^2*Pquad,5);
+[Xpost_resample,~] = GH_points(mquad,0.8^2*Pquad,5);
 
-probsY=normpdf.func(Y);
+y=pdfXpostnorm.trueX2normX(Xpost_resample);
+py=pdfXpostnorm.func(y);
+probsXpost_resample=pdfXpostnorm.normprob2trueprob(py);
+
 
 

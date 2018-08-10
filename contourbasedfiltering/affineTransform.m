@@ -9,6 +9,6 @@ MU=MU(:);
 
 Y=zeros(size(X));
 for i=1:n
-   Y(i,:) = A*X(i,:)+MU; 
+   Y(i,:) = A*X(i,:)'+MU; 
 end
     

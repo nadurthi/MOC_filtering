@@ -49,9 +49,10 @@ time.Ntsteps=length(time.Tvec);
 model.f=@(dt,tk,xk)processmodel_2body_2D(dt,1,tk,xk);
 model.fn=4;
 
-model.h=@(x)radmodel_2D(x);
-model.hn=2;
-model.R=diag([0.1^2,(5*pi/180)^2]);
+model.h=@(x)radmodel_2D(x,1);
+model.hn=1;
+% model.R=diag([(0.1/constants.Re)^2,(0.5*pi/180)^2]);
+model.R=diag([(0.1/constants.Re)^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 
@@ -72,8 +73,8 @@ Xtruth(1,:)=x0;
 for k=2:time.Ntsteps
     Xtruth(k,:)=model.f(time.dt,time.Tvec(k),Xtruth(k-1,:));
 end
- sum(sqrt(sum(Xtruth(:,1:2).^2,2))<1)
- 
+sum(sqrt(sum(Xtruth(:,1:2).^2,2))<1)
+
 plot(Xtruth(:,1),Xtruth(:,2),'ro')
 axis equal
 
@@ -96,19 +97,19 @@ end
 %    title(['k = ',num2str(k)])
 %    axis equal
 %    axis square
-%    
+%
 %    figure(2)
 %    plot(XMC(:,1,k),XMC(:,2,k),'ro')
 %    title(['k = ',num2str(k)])
 %    axis equal
 %    axis square
-%    
+%
 %    pause(1)
 % end
 
 %% comparing with UKF and particle filter
-
-xf0 = x0;
+xf0=mvnrnd(x0(:)',P0);
+% xf0 = x0;
 Pf0 = P0;
 
 Npf = 5000; %paricle filter points
@@ -164,7 +165,9 @@ plot(X(:,1),X(:,2),'r+')
 Xinitial = X;
 probsinitial = probs;
 
-[Xquad_initial,wquad_initial]=UT_sigmapoints(xf0(:),Pf0,2);
+model.quadfunc=@(x,P)UT_sigmapoints(x,P,2);
+
+[Xquad_initial,wquad_initial]=model.quadfunc(xf0(:),Pf0);
 probs_quad = mvnpdf(Xquad_initial,xf0(:)',Pf0);
 
 
@@ -178,7 +181,8 @@ probs = probsinitial;
 Xquad=Xquad_initial;
 wquad=wquad_initial;
 
-meas_freq_steps = 100000;
+meas_freq_steps = 5;
+
 histXprior=cell(length(time.Ntsteps),5);
 histXpost=cell(length(time.Ntsteps),5);
 
@@ -187,13 +191,13 @@ histXprior{1,2} = probs;
 
 histXpost{1,1} = X;
 histXpost{1,2} = probs;
-teststeps = [18,19];
+teststeps = [24,25];
 
 for k=2:time.Ntsteps
     k
     Xmctest = zeros(size(XMC,1),model.fn);
     for ii=1:size(XMC,1)
-       Xmctest(ii,:) = XMC(ii,:,k); 
+        Xmctest(ii,:) = XMC(ii,:,k);
     end
     disp([' k = ',num2str(k)])
     
@@ -202,51 +206,66 @@ for k=2:time.Ntsteps
     
     [mX,PX]=MeanCov(Xquad,wquad);
     disp(['cond = ',num2str(cond(PX))])
-%     if any(k==teststeps)
-        fullpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xmctest);
-%     end
-%     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
-
+%         if any(k==teststeps)
+    fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xtruth(k,:));
+%         end
+    %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
     
-%     
-%     figure(11)
-%     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),pX,'b+',Xtestmc(:,1),Xtestmc(:,2),pXtest,'gs')
-%     title(['k = ',num2str(k)])
-
+    
+    %
+    %     figure(11)
+    %     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),pX,'b+',Xtestmc(:,1),Xtestmc(:,2),pXtest,'gs')
+    %     title(['k = ',num2str(k)])
+    
     
     histXprior{k,1}=X;
     histXprior{k,2}=probs;
-    histXprior{k,3}=fullpdf;
-
+    histXprior{k,3}=fullnormpdf;
+    
     histXprior{k,4}=Xquad;
     histXprior{k,5}=wquad;
     
     pause(1)
     
-    zk = model.h(Xtruth(k,:)')+sqrtm(model.R)*randn(model.hn,1);
-    zk
+    
     
     
     % do measurement update
-    if k>2
+    if k>=2
         if rem(k,meas_freq_steps)==0
             disp("doing meas update")
+            zk = model.h(Xtruth(k,:)')+sqrtm(model.R)*randn(model.hn,1);
+            zk
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
-            [X,probs]=MeasUpdt_character(X,probs,zk,model);
+            [X,probs,Xquad,wquad,fullnormpdf]=MeasUpdt_character(fullnormpdf,X,probs,Xquad,wquad,4,k,zk,model,Xtruth(k,:));
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
+            histXpost{k,1}=X;
+            histXpost{k,2}=probs;
+            histXpost{k,3}=fullnormpdf;
+
+            histXpost{k,4}=Xquad;
+            histXpost{k,5}=wquad;
+    
             
         end
     end
     
-    histXpost{k,1}=X;
-    histXpost{k,2}=probs;
-%     if any(k==teststeps)
-%         
-%         keyboard
-%     end
+
+    
+    y=fullnormpdf.trueX2normX(X);
+    py=fullnormpdf.func(y);
+    probsXest=fullnormpdf.normprob2trueprob(py);
+    
+    figure(49)
+    plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),probsXest,'b+')
+    
+%         if any(k==teststeps)
+    
+%     keyboard
+%         end
+    
     
 end
 
-% save('sim1.mat') 
+% save('sim1.mat')
