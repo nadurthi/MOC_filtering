@@ -108,8 +108,8 @@ end
 % end
 
 %% comparing with UKF and particle filter
-xf0=mvnrnd(x0(:)',P0);
-% xf0 = x0;
+% xf0=mvnrnd(x0(:)',P0);
+xf0 = x0;
 Pf0 = P0;
 
 Npf = 5000; %paricle filter points
@@ -181,7 +181,7 @@ probs = probsinitial;
 Xquad=Xquad_initial;
 wquad=wquad_initial;
 
-meas_freq_steps = 5;
+meas_freq_steps = 5000000;
 
 histXprior=cell(length(time.Ntsteps),5);
 histXpost=cell(length(time.Ntsteps),5);
@@ -207,7 +207,7 @@ for k=2:time.Ntsteps
     [mX,PX]=MeanCov(Xquad,wquad);
     disp(['cond = ',num2str(cond(PX))])
 %         if any(k==teststeps)
-    fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xtruth(k,:));
+    fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xmctest);%Xtruth(k,:)
 %         end
     %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
     
@@ -260,10 +260,10 @@ for k=2:time.Ntsteps
     figure(49)
     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),probsXest,'b+')
     
-%         if any(k==teststeps)
+        if k==23 %any(k==teststeps)
     
-%     keyboard
-%         end
+    keyboard
+        end
     
     
 end

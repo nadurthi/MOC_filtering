@@ -1,13 +1,13 @@
 function pdfnorm = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,Xmctest)
 %%
 dim =size(X,2);
-% 
+%
 % [m,P]=MeanCov(X,probs/sum(probs));
 c=1;
 m=mquad;
 P=Pquad/c;
-
-% 
+% P=eye(dim);
+%
 N=size(X,1);
 
 Z=zeros(size(X));
@@ -91,7 +91,7 @@ Pf=Basis_polyND(dim,Nm);
 A=zeros(N,length(Pf));
 tic
 for r=1:1:N
-   A(r,:) = evaluate_MatrixOfPolys(Pf,Xn(r,:));
+    A(r,:) = evaluate_MatrixOfPolys(Pf,Xn(r,:));
 end
 lam = A\log(pn);
 disp('norm fit')
@@ -106,25 +106,28 @@ toc
 %% reguralization points
 rad=max(sqrt(sum(Xn.^2,2)));
 Xbnd=[]
-% Xbnd=[Xbnd;3*gen_uniform_grid(7,dim)];
+% Xbnd=[Xbnd;2.5*gen_uniform_grid(8,dim)];
 % Xbnd=GH_points(zeros(dim,1),eye(dim),6);
 % Xbnd=3*Xbnd/max(max(Xbnd));
 % Xbnd = [Xbnd;3*(rand(3500,dim)*2-1)];
 [Xbnd1,~] = GLgn_pts(-2.5*ones(1,dim),2.5*ones(1,dim),8);
 % [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),8);
 % Xbnd2=2*(rand(5000,dim)*2-1);
-Xbnd = [Xbnd1;[]];
+Xbnd2=2.5*gen_uniform_grid(8,dim);
+Xbnd = [Xbnd1;Xbnd2];
 % Xbnd=1*Xbnd(sqrt(sum(Xbnd.^2,2))>1.5*rad,:);
 [size(Xbnd),length(lam)]
 removeind=[];
 for i=1:size(Xbnd,1)
-   Idx = knnsearch(Xn,Xbnd(i,:),'K',5);
-   x = Xn(Idx,:);
-   mr = mean(x,1);
-   r  = max(sqrt(sum((x - repmat(mr,size(x,1),1)).^2)));
-   if norm(Xbnd(i,:)-mr)<2*r
-       removeind=[removeind,i];
-   end
+    Idx = knnsearch(Xn,Xbnd(i,:),'K',5);
+    x = Xn(Idx,:);
+    mr = mean(x,1);
+    r  = max(sqrt(sum((x - repmat(mr,size(x,1),1)).^2)));
+%     if norm(Xbnd(i,:)-mr)<0.5
+    if norm(Xbnd(i,:)-mr)<2*r
+        removeind=[removeind,i];
+    end
+%     end
 end
 size(Xbnd,1)
 Xbnd(removeind,:)=[];
@@ -134,18 +137,18 @@ hold on
 plot3(Xbnd(:,1),Xbnd(:,2),-ones(size(Xbnd,1),1),'b+')
 hold off
 
-% 
+%
 M=size(Xbnd,1);
 Dineq = zeros(M,length(Pf));
 for r=1:1:M
-   Dineq(r,:) = evaluate_MatrixOfPolys(Pf,Xbnd(r,:));
+    Dineq(r,:) = evaluate_MatrixOfPolys(Pf,Xbnd(r,:));
 end
 
 
 [Xmax,~] = GLgn_pts(-1*ones(1,dim),1*ones(1,dim),8);
 Tineq = zeros(size(Xmax,1),length(Pf));
 for r=1:1:size(Xmax,1)
-   Tineq(r,:) = evaluate_MatrixOfPolys(Pf,Xmax(r,:));
+    Tineq(r,:) = evaluate_MatrixOfPolys(Pf,Xmax(r,:));
 end
 
 %%
@@ -161,7 +164,7 @@ logpnfit = log(pnfit);
 
 
 lamdim=length(lam);
-K = (min(logpnfit)-1)*ones(size(Dineq,1),1);
+K = (min(logpnfit))*ones(size(Dineq,1),1);
 KK=K;
 DD=Dineq;
 Atop=A(1:15,:);
@@ -175,13 +178,13 @@ LAMS=zeros(lamdim,length(CC));
 costs = zeros(1,length(CC));
 for ci = 1:length(CC)
     cvx_begin
-        variables t2(15) t(lenconstr) lam2(lamdim)
-        minimize( CC(ci)*norm(lam2,1)+20*norm(t,2)+50*norm(t2,2))
-        subject to
-        DD*lam2 <= KK  
-        A*lam2==logpnfit+t
-        Atop*lam2==logpntop+t2
-        Tineq*lam2<=max(logpnfit)
+    variables t2(15) t(lenconstr) lam2(lamdim)
+    minimize( CC(ci)*norm(lam2,1)+20*norm(t,2)+50*norm(t2,2))
+    subject to
+    DD*lam2 <= KK
+    A*lam2==logpnfit+t
+    Atop*lam2==logpntop+t2
+    Tineq*lam2<=max(logpnfit)
     cvx_end
     LAMS(:,ci)=lam2;
     costs(ci) = norm(t,2);
@@ -269,7 +272,7 @@ title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
 
 
 % Xtrasf=pdfnorm.normX2trueX(Xn) ;
-% 
+%
 % figure
 % plot(X(:,1),X(:,2),'ro',Xtrasf(:,1),Xtrasf(:,2),'b+')
 
@@ -285,23 +288,27 @@ if plotmargs == 1
     % Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
     margprobs = zeros(size(Xx));
     margprobs_cell = cell(size(Xx,1),1);
-    parfor i=1:size(Xx,1)
-        margprobs_cell{i} = zeros(size(Xx,2),1);
-        for j=1:size(Xx,2)
-            margprobs_cell{i}(j) = get_2Dmarginalized_probs([Xx(i,j),Xy(i,j)],1,2,Xn,pn,NaN,NaN,pdfnorm,'ClusterMC');
+    if dim==2
+        for i=1:size(Xx,1)
+            margprobs_cell{i} = zeros(size(Xx,2),1);
+            for j=1:size(Xx,2)
+                margprobs_cell{i}(j) = pdfnorm.func([Xx(i,j),Xy(i,j)]);
+            end
+        end
+        
+    else
+        parfor i=1:size(Xx,1)
+            margprobs_cell{i} = zeros(size(Xx,2),1);
+            for j=1:size(Xx,2)
+                margprobs_cell{i}(j) = get_2Dmarginalized_probs([Xx(i,j),Xy(i,j)],1,2,Xn,pn,NaN,NaN,pdfnorm,'ClusterMC');
+            end
+        end
+        for i=1:size(Xx,1)
+            margprobs(i,:) = margprobs_cell{i};
         end
     end
-    for i=1:size(Xx,1)
-        margprobs(i,:) = margprobs_cell{i};
-    end
-%     Xxtrue = zeros(size(Xx));
-%     Xytrue = zeros(size(Xx));
-%     margprobs_true = zeros(size(margprobs));
-%     for i=1:size(Xx,1)
-%         for j=1:size(Xx,2)
-%             Xxtrue(i,j)
-%         end
-%     end
+    
+   
     
     figure(1)
     contour(Xx,Xy,margprobs,15)
@@ -310,7 +317,7 @@ if plotmargs == 1
         plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
     end
     
-%     plot(Xt(:,1),Xt(:,2),'g*')
+    %     plot(Xt(:,1),Xt(:,2),'g*')
     title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
     xlabel('x')
     ylabel('y')
@@ -328,7 +335,7 @@ if plotmargs == 1
         plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
     end
     
-%     plot(Xt(:,1),Xt(:,2),'g*')
+    %     plot(Xt(:,1),Xt(:,2),'g*')
     title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
     xlabel('x')
     ylabel('y')
@@ -337,20 +344,20 @@ if plotmargs == 1
     hold off
     saveas(gcf,['sim2sat/surf_',num2str(Tk)],'png')
     saveas(gcf,['sim2sat/surf_',num2str(Tk)],'fig')
-
+    
 end
 disp('Done marg')
 
 %%
 
 % mxentpoly=linear_transform_poly(mxentpoly_norm,Psqrt_inv,-Psqrt_inv*m(:));
-% 
-% 
+%
+%
 % c=1/det(Psqrt);
 % cexp = -log(det(Psqrt));
 % c0 = get_coeff_NDpoly(mxentpoly,zeros(1,dim));
 % mxentpoly = update_or_insert_coeff_NDpoly(mxentpoly,zeros(1,dim),c0+cexp);
-% 
+%
 % pdf.func=@(x)exp(evaluate_polyND(mxentpoly,x));
 % pdf.poly=mxentpoly;
 

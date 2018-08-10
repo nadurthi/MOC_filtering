@@ -24,38 +24,31 @@ time.Ntsteps=length(time.Tvec);
 model.f=@(dt,tk,xk)duff_prop_model(dt,xk);
 model.fn=2;
 
-model.h=@(x)radmodel_2D(x,1);
-model.hn=1;
+model.h=@(x)@(x)[x(1);x(2)];
+model.hn=2;
 % model.R=diag([(0.1/constants.Re)^2,(0.5*pi/180)^2]);
-model.R=diag([(0.1/constants.Re)^2]);
+model.R=diag([0.5^2,1^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 
 %% generate truth
 
-x0=[7000,5000,1.0,3.4]';
-[ r, v, Ehat ] = FnG(0, time.dt, [x0(1:2);0], [x0(3:4);0], 1);
-[ r1, v1, Ehat ] = FnG(0, time.dt, r, -v, 1);
-
-P0=diag([1^2,1^2,0.0001^2,0.0001^2]);
-x0(1:2)=x0(1:2)*constants.trueX2normX;
-x0(3:4)=x0(3:4)*constants.trueV2normV;
-P0(1:2,1:2)=P0(1:2,1:2)*constants.trueX2normX^2;
-P0(3:4,3:4)=P0(3:4,3:4)*constants.trueV2normV^2;
+x0=[5,5]';
+P0=0.7^2*eye(2);
 
 Xtruth = zeros(time.Ntsteps,model.fn);
 Xtruth(1,:)=x0;
 for k=2:time.Ntsteps
     Xtruth(k,:)=model.f(time.dt,time.Tvec(k),Xtruth(k-1,:));
 end
-sum(sqrt(sum(Xtruth(:,1:2).^2,2))<1)
+
 
 plot(Xtruth(:,1),Xtruth(:,2),'ro')
 axis equal
 
 
 % plotting the propagatin of MC
-Nmc=2000;
+Nmc=100;
 XMC=zeros(Nmc,model.fn,time.Ntsteps);
 XMC(:,:,1)=mvnrnd(x0',P0,Nmc);
 for i=1:Nmc
@@ -92,35 +85,8 @@ Npf = 5000; %paricle filter points
 
 % generate points on contours for characterisitc solutions
 
-Nchpol = 50;  % points used by characteristic points and polynomials
 
-dirnmat = mvnrnd(zeros(1,model.fn),eye(model.fn),10000);
-dirnmat = dirnmat./sqrt(sum(dirnmat.^2,2));
-[idx,C] = kmeans(dirnmat,Nchpol);
-C = C./sqrt(sum(C.^2,2));
-
-Sphere4Dpoints = sphere4Dm(6);
-
-Dirmats{1}=Sphere4Dpoints;
-
-dirnmat = mvnrnd(zeros(1,model.fn),eye(model.fn),10000);
-dirnmat = dirnmat./sqrt(sum(dirnmat.^2,2));
-[idx,C] = kmeans(dirnmat,Nchpol);
-C = C./sqrt(sum(C.^2,2));
-
-Sphere4Dpoints = sphere4Dm(5);
-Dirmats{2}=3*Sphere4Dpoints;
-
-dirnmat = mvnrnd(zeros(1,model.fn),eye(model.fn),10000);
-dirnmat = dirnmat./sqrt(sum(dirnmat.^2,2));
-[idx,C] = kmeans(dirnmat,Nchpol);
-C = C./sqrt(sum(C.^2,2));
-
-Sphere4Dpoints = sphere4Dm(4);
-Dirmats{3}=6*Sphere4Dpoints;
-
-X=[Dirmats{1};Dirmats{2};Dirmats{3}]; %1sigma, 3 sigma and 6sigma
-[X,w] = GH_points(zeros(4,1),0.5^2*eye(4),5);
+[X,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),5);
 
 % [X,w] = mvnrnd(zeros(4,1),0.5*eye(4),500);
 
@@ -130,8 +96,6 @@ for i=1:size(X,1)
 end
 probs = mvnpdf(X,xf0(:)',Pf0);
 
-figure
-plot3(X(:,1),X(:,2),X(:,3),'r+')
 
 figure
 plot(X(:,1),X(:,2),'r+')
@@ -156,7 +120,7 @@ probs = probsinitial;
 Xquad=Xquad_initial;
 wquad=wquad_initial;
 
-meas_freq_steps = 5;
+meas_freq_steps = 5000000;
 
 histXprior=cell(length(time.Ntsteps),5);
 histXpost=cell(length(time.Ntsteps),5);
@@ -182,7 +146,7 @@ for k=2:time.Ntsteps
     [mX,PX]=MeanCov(Xquad,wquad);
     disp(['cond = ',num2str(cond(PX))])
 %         if any(k==teststeps)
-    fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xtruth(k,:));
+    fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,Xmctest); %Xtruth(k,:)
 %         end
     %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
     
