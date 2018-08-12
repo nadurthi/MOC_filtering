@@ -144,21 +144,18 @@ for k=2:time.Ntsteps
     [Xquad,wquad]=propagate_character(Xquad,wquad,time.dt,time.Tvec(k),model);
     
     [mX,PX]=MeanCov(Xquad,wquad);
-%     mX=X(probs==max(probs),:);
-%     PX=0;
-%     wts=probs/sum(probs);
-%     for i=1:size(X,1)
-%        PX=PX+ wts(i)*(X(i,:)-mX)'*(X(i,:)-mX);
-%     end
+    mX=X(probs==max(probs),:);
+    PX=0;
+    wts=probs/sum(probs);
+    for i=1:size(X,1)
+       PX=PX+ wts(i)*(X(i,:)-mX)'*(X(i,:)-mX);
+    end
     disp(['cond = ',num2str(cond(PX))])
     fullnormpdf=NaN;
-    
-%         if any(k==teststeps)
+        if any(k==teststeps)
     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,Xmctest); %Xtruth(k,:)
-%         end
-    
-%     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
-    
+        end
+    %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
     
     
     %
@@ -210,10 +207,10 @@ for k=2:time.Ntsteps
 %     
 %     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),probsXest,'b+')
 %     
-%         if any(k==teststeps)
+        if any(k==teststeps)
     
     keyboard
-%         end
+        end
     
     
 end
