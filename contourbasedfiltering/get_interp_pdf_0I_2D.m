@@ -346,8 +346,8 @@ if plotmargs == 1
     
     %     plot(Xt(:,1),Xt(:,2),'g*')
     title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-    xlabel('x')
-    ylabel('y')
+    xlabel('x_1')
+    ylabel('x_2')
     axis equal
     axis square
     hold off
@@ -370,8 +370,8 @@ if plotmargs == 1
     
     %     plot(Xt(:,1),Xt(:,2),'g*')
     title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-    xlabel('x')
-    ylabel('y')
+    xlabel('x_1')
+    ylabel('x_2')
     axis equal
     axis square
     hold off
@@ -389,7 +389,7 @@ if plotmargs == 1
     view([26,43])
     hold on
     if isempty(Xmctest)==0
-        plot3(Xmctest(:,1),Xmctest(:,2),plotsconf.fig3.contourZshift,'r.')
+        plot3(Xmctest(:,1),Xmctest(:,2),repmat(plotsconf.fig3.contourZshift,size(Xmctest,1),1),'r.')
     end
     if isempty(Xtruth)==0
         if plotsconf.fig3.plottruth == true
@@ -402,8 +402,8 @@ if plotmargs == 1
     end
     %     plot(Xt(:,1),Xt(:,2),'g*')
     title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-    xlabel('x')
-    ylabel('y')
+    xlabel('x_1')
+    ylabel('x_2')
     axis equal
     axis square
     hold off
@@ -433,8 +433,8 @@ if plotmargs == 1
     
     %     plot(Xt(:,1),Xt(:,2),'g*')
     title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-    xlabel('x')
-    ylabel('y')
+    xlabel('x_1')
+    ylabel('x_2')
     axis equal
     axis square
     hold off

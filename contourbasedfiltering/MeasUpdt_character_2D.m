@@ -45,7 +45,7 @@ Pquad_postukf=Pquad-K*Pz*K';
 
 [mquad_post,Pquad_post] = MeanCov(X,probsXpost/sum(probsXpost));
 
-plotsconf.plotfolder='duffsim1';
+plotsconf.plotfolder='duffsim1_meassingle';
 plotsconf.nametag='post';
 plotsconf.fig3.holdon =true;
 plotsconf.fig4.holdon =true;
@@ -53,8 +53,8 @@ plotsconf.fig3.plottruth = true;
 plotsconf.fig4.plottruth = true;
 plotsconf.fig1.plottruth = true;
 plotsconf.fig2.plottruth = true;
-plotsconf.fig3.plotmeas = z;
-plotsconf.fig4.plotmeas = z;
+plotsconf.fig3.plotmeas = [];
+plotsconf.fig4.plotmeas = [];
 plotsconf.fig4.surfcol = 'red';
 plotsconf.fig3.contourZshift = +0.1;
 

@@ -24,10 +24,10 @@ time.Ntsteps=length(time.Tvec);
 model.f=@(dt,tk,xk)duff_prop_model(dt,xk);
 model.fn=2;
 
-model.h=@(x)[x(1);x(2)];
-model.hn=2;
+model.h=@(x)[sqrt(x(1)^2+x(2)^2)];
+model.hn=1;
 % model.R=diag([(0.1/constants.Re)^2,(0.5*pi/180)^2]);
-model.R=diag([1^2,1^2]);
+model.R=diag([0.5^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 
@@ -46,6 +46,13 @@ figure
 plot(Xtruth(:,1),Xtruth(:,2),'ro')
 axis equal
 axis square
+
+figure
+[t,x]=ode45(@duff,linspace(0,10,1000),x0);
+plot(x(:,1),x(:,2),'b')
+axis equal
+axis square
+
 
 % plotting the propagatin of MC
 Nmc=1000;
@@ -76,8 +83,8 @@ end
 % end
 
 %% comparing with UKF and particle filter
-xf0=mvnrnd(x0(:)',P0);
-% xf0 = x0;
+% xf0=mvnrnd(x0(:)',P0);
+xf0 = x0;
 Pf0 = P0;
 
 Npf = 5000; %paricle filter points
@@ -112,7 +119,7 @@ probs_quad = mvnpdf(Xquad_initial,xf0(:)',Pf0);
 
 
 %% run filter
-% close all
+close all
 
 X = Xinitial;
 probs = probsinitial;
@@ -156,7 +163,7 @@ for k=2:time.Ntsteps
     fullnormpdf=NaN;
     
 %         if any(k==teststeps)
-    plotfolder='duffsim1';
+    plotfolder='duffsim1_meassingle';
     mkdir(plotfolder)
     plotsconf.plotfolder=plotfolder;
     plotsconf.nametag='prior';
@@ -169,7 +176,7 @@ for k=2:time.Ntsteps
     plotsconf.fig3.plotmeas = [];
     plotsconf.fig4.plotmeas = [];
     plotsconf.fig4.surfcol = 'green';
-    plotsconf.fig3.contourZshift = -0.2;
+    plotsconf.fig3.contourZshift = 0;
     
     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
 %         end
@@ -229,7 +236,7 @@ for k=2:time.Ntsteps
 %     
 %         if any(k==teststeps)
     
-    keyboard
+%     keyboard
 %         end
     
     

@@ -90,22 +90,31 @@ for i=1:Nmc
 end
 
 %%
+close all
 
-% for k=1:time.Ntsteps
-%    figure(1)
-%    plot(XMC(:,1,k),XMC(:,2,k),'ro',Xtruth(:,1),Xtruth(:,2),'bo')
-%    title(['k = ',num2str(k)])
-%    axis equal
-%    axis square
-%
-%    figure(2)
-%    plot(XMC(:,1,k),XMC(:,2,k),'ro')
-%    title(['k = ',num2str(k)])
-%    axis equal
-%    axis square
-%
-%    pause(1)
-% end
+for k=1:time.Ntsteps
+   figure(1)
+   subplot(1,2,1)
+   plot(XMC(:,1,k),XMC(:,2,k),'ro')
+   title(['k = ',num2str(k)])
+   axis equal
+   axis square
+
+   subplot(1,2,2)
+   XXX = zeros(Nmc,model.fn);
+   XXX = XMC(:,:,k);
+   [m,P] = MeanCov(XXX,ones(Nmc,1)/Nmc);
+   A=sqrtm(inv(P));
+   for i=1:Nmc
+       XXX(i,:) = A*(XXX(i,:)'-m(:));
+   end
+   plot(XXX(:,1),XXX(:,2),'ro')
+   title(['k = ',num2str(k)])
+   axis equal
+   axis square
+
+   keyboard
+end
 
 %% comparing with UKF and particle filter
 % xf0=mvnrnd(x0(:)',P0);
