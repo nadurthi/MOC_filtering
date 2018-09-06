@@ -7,7 +7,8 @@ x=x(:);
 % x=x'-ecef_ref(Srad,:);
 % xenu = ecef2enu(x*1e3,ecef_ref(Srad,:)*1e3)/1000;
 
-xenu=x-[6731,0,0]';
+% xenu=x-[6731,0,0]';
+xenu=x;
 
 xenu(:)';
 r=norm(xenu);
@@ -15,6 +16,6 @@ th=atan2(xenu(1),xenu(2));
 phi=atan2(sqrt(xenu(1)^2+xenu(2)^2),xenu(3));
 
 
-h=[r;th];
+h=[r;th;phi];
 
 end

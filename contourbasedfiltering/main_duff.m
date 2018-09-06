@@ -24,10 +24,10 @@ time.Ntsteps=length(time.Tvec);
 model.f=@(dt,tk,xk)duff_prop_model(dt,xk);
 model.fn=2;
 
-model.h=@(x)@(x)[x(1);x(2)];
-model.hn=2;
+model.h=@(x)[sqrt(x(1)^2+x(2)^2)];
+model.hn=1;
 % model.R=diag([(0.1/constants.Re)^2,(0.5*pi/180)^2]);
-model.R=diag([0.5^2,1^2]);
+model.R=diag([0.5^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 
@@ -47,8 +47,15 @@ plot(Xtruth(:,1),Xtruth(:,2),'ro')
 axis equal
 axis square
 
+figure
+[t,x]=ode45(@duff,linspace(0,10,1000),x0);
+plot(x(:,1),x(:,2),'b')
+axis equal
+axis square
+
+
 % plotting the propagatin of MC
-Nmc=2000;
+Nmc=1000;
 XMC=zeros(Nmc,model.fn,time.Ntsteps);
 XMC(:,:,1)=mvnrnd(x0',P0,Nmc);
 for i=1:Nmc
@@ -86,7 +93,7 @@ Npf = 5000; %paricle filter points
 % generate points on contours for characterisitc solutions
 
 
-[X,w] = GH_points(zeros(model.fn,1),0.8^2*eye(model.fn),11);
+[X,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),11);
 
 % [X,w] = mvnrnd(zeros(4,1),0.5*eye(4),500);
 
@@ -112,7 +119,7 @@ probs_quad = mvnpdf(Xquad_initial,xf0(:)',Pf0);
 
 
 %% run filter
-% close all
+close all
 
 X = Xinitial;
 probs = probsinitial;
@@ -120,7 +127,7 @@ probs = probsinitial;
 Xquad=Xquad_initial;
 wquad=wquad_initial;
 
-meas_freq_steps = 5000000;
+meas_freq_steps = 1;
 
 histXprior=cell(length(time.Ntsteps),5);
 histXpost=cell(length(time.Ntsteps),5);
@@ -142,8 +149,10 @@ for k=2:time.Ntsteps
     
     [X,probs]=propagate_character(X,probs,time.dt,time.Tvec(k),model);
     [Xquad,wquad]=propagate_character(Xquad,wquad,time.dt,time.Tvec(k),model);
+        
+    [mX,PX]=MeanCov(X,probs/sum(probs));
     
-    [mX,PX]=MeanCov(Xquad,wquad);
+%     [mX,PX]=MeanCov(Xquad,wquad);
 %     mX=X(probs==max(probs),:);
 %     PX=0;
 %     wts=probs/sum(probs);
@@ -154,7 +163,22 @@ for k=2:time.Ntsteps
     fullnormpdf=NaN;
     
 %         if any(k==teststeps)
-    fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,Xmctest); %Xtruth(k,:)
+    plotfolder='duffsim1_meassingle';
+    mkdir(plotfolder)
+    plotsconf.plotfolder=plotfolder;
+    plotsconf.nametag='prior';
+    plotsconf.fig3.holdon = false;
+    plotsconf.fig4.holdon = false;
+    plotsconf.fig3.plottruth = true;
+    plotsconf.fig4.plottruth = true;
+    plotsconf.fig1.plottruth = true;
+    plotsconf.fig2.plottruth = true;
+    plotsconf.fig3.plotmeas = [];
+    plotsconf.fig4.plotmeas = [];
+    plotsconf.fig4.surfcol = 'green';
+    plotsconf.fig3.contourZshift = 0;
+    
+    fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
 %         end
     
 %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
@@ -187,7 +211,7 @@ for k=2:time.Ntsteps
             zk
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
-            [X,probs,Xquad,wquad,fullnormpdf]=MeasUpdt_character_2D(fullnormpdf,X,probs,Xquad,wquad,4,k,zk,model,Xtruth(k,:));
+            [X,probs,Xquad,wquad,fullnormpdf]=MeasUpdt_character_2D(fullnormpdf,X,probs,Xquad,wquad,4,k,zk,Xtruth,model,Xmctest);
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             histXpost{k,1}=X;
             histXpost{k,2}=probs;
@@ -212,7 +236,7 @@ for k=2:time.Ntsteps
 %     
 %         if any(k==teststeps)
     
-    keyboard
+%     keyboard
 %         end
     
     
