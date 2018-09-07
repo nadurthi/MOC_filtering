@@ -32,7 +32,7 @@ if strcmp(method,'ClusterMC')
 %     Pcov=Pquad;
     
     
-    [IDX,C] = kmeans(X, 1);
+    [IDX,C] = kmeans(X, 2);
     remclust = [];
     for i=1:size(C,1)
         [m,pR]=MeanCov(X(IDX==i,:),probest(IDX==i)/sum(probest(IDX==i)));
