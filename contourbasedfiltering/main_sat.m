@@ -289,10 +289,10 @@ for k=2:time.Ntsteps
     figure(49)
     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),probsXest,'b+')
     
-        if k==23 %any(k==teststeps)
+%         if k==23 %any(k==teststeps)
     
     keyboard
-        end
+%         end
     
     
 end

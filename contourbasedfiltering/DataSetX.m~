@@ -1,0 +1,31 @@
+classdef DataSetX < handle
+    %maintain the points and their probabilities
+    % provide methods to trasnform them
+    
+    properties
+        X
+        affinetransforms={}
+        cntrans=0;
+    end
+    methods
+        % constructor. save a copy constants
+        function obj= DataSetX(X)
+            obj.X=X;
+        end
+        
+        function obj = AddaffineTrasform(obj,A,m)
+            obj.cntrans=obj.cntrans+1;
+            obj.affinetransforms{obj.cntrans}={A,m};
+            
+            for i=1:size(obj.X,1)
+                obj.X(i,:) = A*obj.X(i,:)'+m(:);
+            end
+        end
+        function [A,m]=GetFinalAffineTransformFromOriginal(obj)
+            A=1;
+            for i=1:obj.cntrans
+                A=obj.affinetransforms{obj.cntrans}{1}*;
+            end
+        end
+    end
+end

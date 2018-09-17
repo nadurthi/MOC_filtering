@@ -1,6 +1,6 @@
 function pdfnorm = get_interp_pdf_0I(X,probs,mquad,Pquad,Nm,Tk,Xmctest,Xtruth,plotsconf)
 %%
-plotfolder ='simsat';
+plotfolder ='simsat2';
 
 dim =size(X,2);
 %
@@ -282,8 +282,8 @@ pdfnorm.mquad = mquad;
 % pdftransF.Xnorm0I2Xnorm11 = @(xn)Xnorm0I2Xnorm11(xn,minx,maxx,mquad,Pquad);
 % pdftransF.Xnorm112Xnorm0I = @(xn)Xnorm112Xnorm0I(xn,minx,maxx,mquad,Pquad);
 
-
-
+pdftrue = pdfnorm;
+pdftrue.func = @(xtr)pdfnorm.normprob2trueprob(exp(evaluate_polyND( mxentpoly_norm,pdfnorm.trueX2normX(xtr) ) ) );
 %% [pltiing and testing
 % keyboard
 
@@ -291,9 +291,9 @@ Xt=[];
 [IDX,C] = kmeans(Xn, 3);
 for i=1:size(C,1)
     if length(logpn(IDX==i))>dim*2
-        [m,pR]=MeanCov(Xn(IDX==i,:),pn(IDX==i)/sum(pn(IDX==i)));
+        [mR,pR]=MeanCov(Xn(IDX==i,:),pn(IDX==i)/sum(pn(IDX==i)));
         if all(eig(pR)>0)
-            Xt=[Xt;mvnrnd(m,2^2*pR,1000)];
+            Xt=[Xt;mvnrnd(mR,2^2*pR,1000)];
         end
     end
 end
@@ -346,15 +346,34 @@ if plotmargs == 1
     margprobs = zeros(size(Xx));
     margprobs_cell = cell(size(Xx,1),1);
     
+    margprobs_gauss = zeros(size(Xx));
+    
+    [Xxtr,Xytr]=meshgrid(linspace(mquad(1)-2*sqrt(Pquad(1,1)),mquad(1)+2*sqrt(Pquad(1,1)),25),linspace(mquad(2)-2*sqrt(Pquad(2,2)),mquad(2)+2*sqrt(Pquad(2,2)),25) );
+    % Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
+    margprobs_true = zeros(size(Xxtr));
+    margprobs_cell_true = cell(size(Xxtr,1),1);
+%     keyboard
+    
+    [Mn,Pn]=MeanCov(Xn,pn/sum(pn));
+
     parfor i=1:size(Xx,1)
         margprobs_cell{i} = zeros(size(Xx,2),1);
+        margprobs_cell_true{i}= zeros(size(Xxtr,2),1);
         for j=1:size(Xx,2)
             margprobs_cell{i}(j) = get_2Dmarginalized_probs([Xx(i,j),Xy(i,j)],1,2,Xn,pn,NaN,NaN,pdfnorm,'ClusterMC');
+            margprobs_cell_true{i}(j) = get_2Dmarginalized_probs([Xxtr(i,j),Xytr(i,j)],1,2,X,probs,NaN,NaN,pdftrue,'ClusterMC');
+            
+        end
+    end
+    for i=1:size(Xx,1)
+        for j=1:size(Xx,2)
+            margprobs_gauss(i,j) = mvnpdf([Xx(i,j),Xy(i,j)],Mn(1:2)',Pn(1:2,1:2));
         end
     end
     
     for i=1:size(Xx,1)
         margprobs(i,:) = margprobs_cell{i};
+        margprobs_true(i,:) = margprobs_cell_true{i};
     end
     
     
@@ -365,15 +384,15 @@ if plotmargs == 1
         hold on
     end
     contour(Xx,Xy,margprobs,15,plotsconf.fig3.contcol)
-    %     hold on
-    if plotsconf.fig3.holdon
+        hold on
+%     if plotsconf.fig3.holdon
         if isempty(Xmctest)==0
             plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
         end
         if isempty(Xntruth)==0
             plot(Xntruth(:,1),Xntruth(:,2),'k*')
         end
-    end
+%     end
     
     %     plot(Xt(:,1),Xt(:,2),'g*')
     title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
@@ -389,16 +408,49 @@ if plotmargs == 1
     if plotsconf.fig3.holdon
         hold on
     end
-    surf(Xx,Xy,margprobs,'FaceColor',plotsconf.fig3.contcol,'EdgeColor','none','FaceAlpha',0.7);
+    surf(Xx,Xy,margprobs,'FaceColor',plotsconf.fig3.contcol,'EdgeColor','none','FaceAlpha',0.4);
+    hold on
+    surf(Xx,Xy,margprobs_gauss,'FaceColor','g','EdgeColor','none','FaceAlpha',0.4);
+    hold off
     camlight right; lighting phong  
-    alpha 0.7
+    alpha 0.4
     %     hold on
-    if plotsconf.fig3.holdon
+%     if plotsconf.fig3.holdon
+        hold on
         if isempty(Xmctest)==0
             plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
         end
         if isempty(Xntruth)==0
             plot(Xntruth(:,1),Xntruth(:,2),'k*')
+        end
+        hold off
+%     end
+    
+    %     plot(Xt(:,1),Xt(:,2),'g*')
+    title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
+    view([-10,32])
+    xlabel('x')
+    ylabel('y')
+    axis equal
+    axis square
+    hold off
+    saveas(gcf,[plotfolder,'/NormSurf_',plotsconf.nametag,'_',num2str(Tk)],'png')
+    saveas(gcf,[plotfolder,'/NormSurf_',plotsconf.nametag,'_',num2str(Tk)],'fig')
+    %-------------------------------------------------------------------------------
+    figure(3)
+    if plotsconf.fig3.holdon
+        hold on
+    end
+    surf(Xxtr,Xytr,margprobs_true,'FaceColor',plotsconf.fig3.contcol,'EdgeColor','none','FaceAlpha',0.7);
+    camlight right; lighting phong  
+    alpha 0.7
+    %     hold on
+    if plotsconf.fig3.holdon
+        if isempty(Xmctest)==0
+            plot(Xmctest(:,1),Xmctest(:,2),'ro')
+        end
+        if isempty(Xtruth)==0
+            plot(Xtruth(:,1),Xtruth(:,2),'k*')
         end
     end
     
@@ -409,8 +461,9 @@ if plotmargs == 1
     axis equal
     axis square
     hold off
-    saveas(gcf,[plotfolder,'/NormSurf_',plotsconf.nametag,'_',num2str(Tk)],'png')
-    saveas(gcf,[plotfolder,'/NormSurf_',plotsconf.nametag,'_',num2str(Tk)],'fig')
+    saveas(gcf,[plotfolder,'/TrueSurf_',plotsconf.nametag,'_',num2str(Tk)],'png')
+    saveas(gcf,[plotfolder,'/TrueSurf_',plotsconf.nametag,'_',num2str(Tk)],'fig')
+    
     
 end
 disp('Done marg')

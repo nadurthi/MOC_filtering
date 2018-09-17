@@ -177,8 +177,8 @@ for k=2:time.Ntsteps
     plotsconf.fig4.plotmeas = [];
     plotsconf.fig4.surfcol = 'green';
     plotsconf.fig3.contourZshift = 0;
-    
-    fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
+    fullnormpdf=get_interp_pdf_0I_boostmixGaussian_2D(X,probs,mX,PX,4,3,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
+%     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
 %         end
     
 %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
