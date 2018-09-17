@@ -1,6 +1,0 @@
-function f=eval_exppdf_affineTrans(xtrue,pdfnorm,pdftransF)
-if any(size(xtrue)==1)
-   xtrue=xtrue(:)'; 
-end
-[n,dim]=
-pdftransF.trueX2normX()
