@@ -127,41 +127,17 @@ end
 xf0 = x0;
 Pf0 = P0;
 
+xfquad = xf0;
+Pfquad = P0;
+
 Npf = 5000; %paricle filter points
 
 
 % generate points on contours for characterisitc solutions
 
-% Nchpol = 50;  % points used by characteristic points and polynomials
 
-% dirnmat = mvnrnd(zeros(1,model.fn),eye(model.fn),10000);
-% dirnmat = dirnmat./sqrt(sum(dirnmat.^2,2));
-% [idx,C] = kmeans(dirnmat,Nchpol);
-% C = C./sqrt(sum(C.^2,2));
-% 
-% Sphere4Dpoints = sphere4Dm(6);
-% 
-% Dirmats{1}=Sphere4Dpoints;
-% 
-% dirnmat = mvnrnd(zeros(1,model.fn),eye(model.fn),10000);
-% dirnmat = dirnmat./sqrt(sum(dirnmat.^2,2));
-% [idx,C] = kmeans(dirnmat,Nchpol);
-% C = C./sqrt(sum(C.^2,2));
-% 
-% Sphere4Dpoints = sphere4Dm(5);
-% Dirmats{2}=3*Sphere4Dpoints;
-% 
-% dirnmat = mvnrnd(zeros(1,model.fn),eye(model.fn),10000);
-% dirnmat = dirnmat./sqrt(sum(dirnmat.^2,2));
-% [idx,C] = kmeans(dirnmat,Nchpol);
-% C = C./sqrt(sum(C.^2,2));
-% 
-% Sphere4Dpoints = sphere4Dm(4);
-% Dirmats{3}=6*Sphere4Dpoints;
-% 
-% X=[Dirmats{1};Dirmats{2};Dirmats{3}]; %1sigma, 3 sigma and 6sigma
-[X,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),5);
-size(X)
+[X,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),11);
+
 % [X,w] = mvnrnd(zeros(4,1),0.5*eye(4),500);
 
 A=sqrt(Pf0);
@@ -170,8 +146,6 @@ for i=1:size(X,1)
 end
 probs = mvnpdf(X,xf0(:)',Pf0);
 
-figure
-plot3(X(:,1),X(:,2),X(:,3),'r+')
 
 figure
 plot(X(:,1),X(:,2),'r+')
@@ -196,19 +170,47 @@ probs = probsinitial;
 Xquad=Xquad_initial;
 wquad=wquad_initial;
 
-meas_freq_steps = 1000000000;
+xfquad = xf0;
+Pfquad = P0;
 
-histXprior=cell(length(time.Ntsteps),5);
-histXpost=cell(length(time.Ntsteps),5);
+meas_freq_steps = 100000000;
+
+histXprior=cell(time.Ntsteps,5);
+histXpost=cell(time.Ntsteps,5);
 
 histXprior{1,1} = X;
 histXprior{1,2} = probs;
 
 histXpost{1,1} = X;
 histXpost{1,2} = probs;
-% teststeps = [24,25];
+teststeps = [33];
+
+plotfolder='duffsim1_prop';
+mkdir(plotfolder)
+
+savePriorProps.plotfolder=plotfolder;
+savePriorProps.saveit=0;
+
+savePostProps.plotfolder=plotfolder;
+savePostProps.saveit=0;
+
+EstMOCfilter_mu =   zeros(time.Ntsteps,model.fn);
+EstMOCfilter_P =    cell(time.Ntsteps,1);
+
+EstQuadfilter_mu =   zeros(time.Ntsteps,model.fn);
+EstQuadfilter_P =    cell(time.Ntsteps,1);
+
+[mX,PX]=MeanCov(X,probs/sum(probs));
+EstMOCfilter_mu(1,:) = mX;
+EstMOCfilter_P{1} = PX;
+
+EstQuadfilter_mu(1,:) = xfquad;
+EstQuadfilter_P{1} = Pfquad;
+
 
 for k=2:time.Ntsteps
+%     close all
+    
     k
     Xmctest = zeros(size(XMC,1),model.fn);
     for ii=1:size(XMC,1)
@@ -216,53 +218,40 @@ for k=2:time.Ntsteps
     end
     disp([' k = ',num2str(k)])
     
-    [X,probs]=propagate_character(X,probs,time.dt,time.Tvec(k-1),model);
-    [Xquad,wquad]=propagate_character(Xquad,wquad,time.dt,time.Tvec(k-1),model);
+    [X,probs]=propagate_character(X,probs,time.dt,time.Tvec(k),model);
+    [Xquad,wquad]=propagate_character(Xquad,wquad,time.dt,time.Tvec(k),model);
+    [xfquad,Pfquad]=QuadProp(xfquad,Pfquad,time.dt,time.Tvec(k),model,'ut');
+
+    
+    
+    [mX,PX]=MeanCov(X,probs/sum(probs));
     
 %     [mX,PX]=MeanCov(Xquad,wquad);
-    [mX,PX]=MeanCov(X,probs/sum(probs));
+%     mX=X(probs==max(probs),:);
+%     PX=0;
+%     wts=probs/sum(probs);
+%     for i=1:size(X,1)
+%        PX=PX+ wts(i)*(X(i,:)-mX)'*(X(i,:)-mX);
+%     end
     disp(['cond = ',num2str(cond(PX))])
+
+    
 %         if any(k==teststeps)
-     plotfolder='duffsim1_meassingle';
-    mkdir(plotfolder)
-    plotsconf.plotfolder=plotfolder;
-    plotsconf.nametag='prior';
-    plotsconf.fig3.holdon = false;
-    plotsconf.fig3.markercol = 'ro';
-    plotsconf.fig3.contcol = 'r';
     
-    
-    plotsconf.fig4.holdon = false;
-    plotsconf.fig3.plottruth = true;
-    plotsconf.fig4.plottruth = true;
-    plotsconf.fig1.plottruth = true;
-    plotsconf.fig2.plottruth = true;
-    plotsconf.fig3.plotmeas = [];
-    plotsconf.fig4.plotmeas = [];
-    plotsconf.fig4.surfcol = 'green';
-    plotsconf.fig3.contourZshift = 0;
-    
-    fullnormpdf = get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,XMC(:,:,k),Xtruth(k,:),plotsconf);
-    
-%     fullnormpdf=get_interp_pdf_0I(X,probs,mX,PX,4,k,XMC(:,:,k),Xtruth(k,:),plotsconf);%XMC(:,:,k)
+    fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
 %     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
-%         end
-    %     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
     
     
-    %
-    %     figure(11)
-    %     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),pX,'b+',Xtestmc(:,1),Xtestmc(:,2),pXtest,'gs')
-    %     title(['k = ',num2str(k)])
-    
+    plotpdfs_prior_2D(k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePriorProps)
     
     histXprior{k,1}=X;
     histXprior{k,2}=probs;
     histXprior{k,3}=fullnormpdf;
     
-    histXprior{k,4}=Xquad;
-    histXprior{k,5}=wquad;
+    histXprior{k,4}=xfquad;
+    histXprior{k,5}=Pfquad;
     
+   
     pause(1)
     
     
@@ -276,35 +265,29 @@ for k=2:time.Ntsteps
             zk
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
-            [X,probs,Xquad,wquad,fullnormpdf]=MeasUpdt_character(fullnormpdf,X,probs,Xquad,wquad,4,k,zk,Xtruth,model,Xmctest);
-%             [X,probs,Xquad,wquad,fullnormpdf]=MeasUpdt_character(fullnormpdf,X,probs,Xquad,wquad,4,k,zk,model,Xtruth(k,:));
+            [X,probs,fullnormpdf]=MeasUpdt_character_modf(fullnormpdf,X,probs,4,k,zk,Xtruth,model,Xmctest);
+            [xfquad,Pfquad]=QuadMeasUpdt(xfquad,Pfquad,zk,time.dt,time.Tvec(k),model,'ut');
+            
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             histXpost{k,1}=X;
             histXpost{k,2}=probs;
             histXpost{k,3}=fullnormpdf;
 
-            histXpost{k,4}=Xquad;
-            histXpost{k,5}=wquad;
+            histXpost{k,4}=xfquad;
+            histXpost{k,5}=Pfquad;
     
             
         end
     end
-    
 
-    
-%     y=fullnormpdf.trueX2normX(X);
-%     py=fullnormpdf.func(y);
-%     probsXest=fullnormpdf.normprob2trueprob(py);
-%     
-%     figure(49)
-%     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),probsXest,'b+')
-%     
-%         if k==8 %any(k==teststeps)
-%     
-%     keyboard
+    keyboard
 
-%         end
-    pause(1)
+%     pause(1)
+    
+    
+    [mestX,PestX]=MeanCov(X,probs/sum(probs));
+    [mestquad,PestXquad]=MeanCov(xfquad,Pfquad);
+    
     
 end
 

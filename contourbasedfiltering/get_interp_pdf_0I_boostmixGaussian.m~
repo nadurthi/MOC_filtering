@@ -28,12 +28,8 @@ end
 figure(33)
 dsX.PlotPointsProbs3D([1,2],'ro');
 hold on 
-if isempty(Xmctest)==0
 plot(Xnmctest(:,1),Xnmctest(:,2),'bs')
-end
-if isempty(Xtruth)==0
 plot(Xntruth(:,1),Xntruth(:,2),'k*')
-end
 title(['true points and MC: time step = ',num2str(Tk)])
 hold off
 
@@ -41,7 +37,7 @@ hold off
 
 GMMfitter = GMMFitDataSet(dsX.X,dsX.p);
 % GMM = GMMfitter.FitGMM_1comp();
-GMM = GMMfitter.FitGMM_kmeans_optimwt(3);
+GMM = GMMfitter.FitGMM_kmeans_optimwt(5);
 
 figure(34)
 GMMfitter.plotGMMpoints([1,2],'ro')
@@ -56,7 +52,7 @@ hold off
 
 
 
-% keyboard
+keyboard
 %% fitting poly to log of probas
 % keyboard
 
@@ -76,11 +72,11 @@ Xbnd2=2.5*gen_uniform_grid(5,dim);
 Xineq = [Xbnd1;Xbnd2;SS];
 
 GMMfitter.SetGMM_Hull();
-indbnd = GMMfitter.IsInsideHull(Xineq,2);
+indbnd = GMMfitter.IsInsideHull(Xineq,3);
 Xineq = Xineq(~indbnd,:);
 
 figure(36)
-GMMfitter.plotGMMpointsHUll([1,2],2,'ro')
+GMMfitter.plotGMMpointsHUll([1,2],3,'ro')
 hold on
 plot3(Xineq(:,1),Xineq(:,2),-ones(size(Xineq,1),1),'b+')
 hold off
@@ -111,14 +107,9 @@ pdfnorm.pdftype = 'ExpPdf';
 
 % keyboard
 
-pdfnorm = normalize_exp_pdf(pdfnorm,dsX.X,dsX.p,mquad,Pquad,GMM,'GMM_MC');
+pdfnorm = normalize_exp_pdf(pdfnorm,dsX.X,dsX.p,mquad,Pquad,'GMM_MC');
 pdfnorm.transForms = dsX.GetTrasnformers();
-% [Atranf2norm,mtransf2norm]=obj.GetAffineTransform_Original2Final();
-% [Atranf2true,mtransf2true]=obj.GetAffineTransform_Final2Original();
-% transForms.trueX2normX = @(x)affineTransform(x,Atranf2norm,mtransf2norm);
-% transForms.normX2trueX = @(xn)affineTransform(xn,Atranf2true,mtransf2true);
-% transForms.normprob2trueprob = @(p)p/det(Atranf2true);
-% transForms.trueprob2normprob = @(p)p/det(Atranf2norm);
+
 
 
 %%

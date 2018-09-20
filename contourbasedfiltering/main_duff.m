@@ -23,6 +23,8 @@ time.Ntsteps=length(time.Tvec);
 
 model.f=@(dt,tk,xk)duff_prop_model(dt,xk);
 model.fn=2;
+model.Q = diag([(1e-4)^2,(1e-4)^2]);
+
 
 model.h=@(x)[sqrt(x(1)^2+x(2)^2)];
 model.hn=1;
@@ -87,6 +89,9 @@ end
 xf0 = x0;
 Pf0 = P0;
 
+xfquad = xf0;
+Pfquad = P0;
+
 Npf = 5000; %paricle filter points
 
 
@@ -127,10 +132,13 @@ probs = probsinitial;
 Xquad=Xquad_initial;
 wquad=wquad_initial;
 
+xfquad = xf0;
+Pfquad = P0;
+
 meas_freq_steps = 1;
 
-histXprior=cell(length(time.Ntsteps),5);
-histXpost=cell(length(time.Ntsteps),5);
+histXprior=cell(time.Ntsteps,5);
+histXpost=cell(time.Ntsteps,5);
 
 histXprior{1,1} = X;
 histXprior{1,2} = probs;
@@ -139,65 +147,68 @@ histXpost{1,1} = X;
 histXpost{1,2} = probs;
 teststeps = [33];
 
+plotfolder='duffsim1_prop';
+mkdir(plotfolder)
+
+savePriorProps.plotfolder=plotfolder;
+savePriorProps.saveit=0;
+
+savePostProps.plotfolder=plotfolder;
+savePostProps.saveit=0;
+
+EstMOCfilter_mu =   zeros(time.Ntsteps,model.fn);
+EstMOCfilter_P =    zeros(time.Ntsteps,model.fn^2);
+
+EstQuadfilter_mu =   zeros(time.Ntsteps,model.fn);
+EstQuadfilter_P =    zeros(time.Ntsteps,model.fn^2);
+
+[mX,PX]=MeanCov(X,probs/sum(probs));
+EstMOCfilter_mu(1,:) = mX;
+EstMOCfilter_P(1,:) = reshape(PX,1,model.fn^2);
+
+EstQuadfilter_mu(1,:) = xfquad;
+EstQuadfilter_P(1,:) = reshape(Pfquad,1,model.fn^2);
+
+
 for k=2:time.Ntsteps
+%     close all
+    
     k
     Xmctest = zeros(size(XMC,1),model.fn);
     for ii=1:size(XMC,1)
         Xmctest(ii,:) = XMC(ii,:,k);
     end
+    Xmctest=[];
     disp([' k = ',num2str(k)])
     
     [X,probs]=propagate_character(X,probs,time.dt,time.Tvec(k),model);
     [Xquad,wquad]=propagate_character(Xquad,wquad,time.dt,time.Tvec(k),model);
-        
+    [xfquad,Pfquad]=QuadProp(xfquad,Pfquad,time.dt,time.Tvec(k),model,'ut');
+
+    
+    
     [mX,PX]=MeanCov(X,probs/sum(probs));
     
-%     [mX,PX]=MeanCov(Xquad,wquad);
-%     mX=X(probs==max(probs),:);
-%     PX=0;
-%     wts=probs/sum(probs);
-%     for i=1:size(X,1)
-%        PX=PX+ wts(i)*(X(i,:)-mX)'*(X(i,:)-mX);
-%     end
+
     disp(['cond = ',num2str(cond(PX))])
-    fullnormpdf=NaN;
+
     
 %         if any(k==teststeps)
-    plotfolder='duffsim1_meassingle';
-    mkdir(plotfolder)
-    plotsconf.plotfolder=plotfolder;
-    plotsconf.nametag='prior';
-    plotsconf.fig3.holdon = false;
-    plotsconf.fig4.holdon = false;
-    plotsconf.fig3.plottruth = true;
-    plotsconf.fig4.plottruth = true;
-    plotsconf.fig1.plottruth = true;
-    plotsconf.fig2.plottruth = true;
-    plotsconf.fig3.plotmeas = [];
-    plotsconf.fig4.plotmeas = [];
-    plotsconf.fig4.surfcol = 'green';
-    plotsconf.fig3.contourZshift = 0;
-    fullnormpdf=get_interp_pdf_0I_boostmixGaussian_2D(X,probs,mX,PX,4,3,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
+    
+    fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
 %     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
-%         end
-    
-%     [fullpdf,pdftransF]=get_interp_pdf_hypercube11(X,probs,mX,PX,4,k,Xmctest);
     
     
-    
-    %
-    %     figure(11)
-    %     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),pX,'b+',Xtestmc(:,1),Xtestmc(:,2),pXtest,'gs')
-    %     title(['k = ',num2str(k)])
-    
+    plotpdfs_prior_2D(k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePriorProps)
     
     histXprior{k,1}=X;
     histXprior{k,2}=probs;
     histXprior{k,3}=fullnormpdf;
     
-    histXprior{k,4}=Xquad;
-    histXprior{k,5}=wquad;
+    histXprior{k,4}=xfquad;
+    histXprior{k,5}=Pfquad;
     
+   
     pause(1)
     
     
@@ -211,35 +222,39 @@ for k=2:time.Ntsteps
             zk
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
-            [X,probs,Xquad,wquad,fullnormpdf]=MeasUpdt_character_2D(fullnormpdf,X,probs,Xquad,wquad,4,k,zk,Xtruth,model,Xmctest);
+            [X,probs,fullnormpdf]=MeasUpdt_character_modf(X,probs,4,k,zk,Xtruth(k,:),model,Xmctest,11);
+%             [X,probs,fullnormpdf]=MeasUpdt_character_modf(fullnormpdf,X,probs,4,k,zk,Xtruth,model,Xmctest);
+            [xfquad,Pfquad]=QuadMeasUpdt(xfquad,Pfquad,zk,time.dt,time.Tvec(k),model,'ut');
+            
+            plotpdfs_post_2D(k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePostProps)
+    
+            
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             histXpost{k,1}=X;
             histXpost{k,2}=probs;
             histXpost{k,3}=fullnormpdf;
 
-            histXpost{k,4}=Xquad;
-            histXpost{k,5}=wquad;
+            histXpost{k,4}=xfquad;
+            histXpost{k,5}=Pfquad;
     
             
         end
     end
-    
 
-    
-
-%     figure(49)
-%     y=fullnormpdf.trueX2normX(X);
-%     py=fullnormpdf.func(y);
-%     probsXest=fullnormpdf.normprob2trueprob(py);
-%     
-%     plot3(X(:,1),X(:,2),probs,'ro',X(:,1),X(:,2),probsXest,'b+')
-%     
-%         if any(k==teststeps)
-    
 %     keyboard
-%         end
+
+%     pause(1)
     
     
+    [mestX,PestX]=MeanCov(X,probs/sum(probs));
+    [mestquad,PestXquad]=MeanCov(xfquad,Pfquad);
+    
+    EstMOCfilter_mu(1,:) = mestX;
+    EstMOCfilter_P(1,:) = reshape(PestX,1,model.fn^2);
+
+    EstQuadfilter_mu(1,:) = mestquad;
+    EstQuadfilter_P(1,:) = reshape(PestXquad,1,model.fn^2);
+
 end
 
 % save('sim1.mat')
