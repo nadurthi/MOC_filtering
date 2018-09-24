@@ -1,526 +1,205 @@
-function pdfnorm = get_interp_pdf_0I_boostmixGaussian(X,probs,mquad,Pquad,Nm,Ngcomp,Tk,Xmctest,Xtruth,plotsconf)
+function pdfnorm = get_interp_pdf_0I_boostmixGaussian(X,probs,mquad,Pquad,Nm,Ngcomp,Tk,Xmctest,Xtruth)
 %%
-plotfolder ='simsat2';
+dsX = DataSet(X,probs,'TrueState');
+[N,dim] =size(X);
 
-dim =size(X,2);
-%
-% [m,P]=MeanCov(X,probs/sum(probs));
-c=1;
-m=mquad(:);
-P=Pquad/c;
-% P=eye(dim);
-%
-N=size(X,1);
+mquad=mquad(:);
 
-Z=zeros(size(X));
+dsX.AddMeanCov_to_OI_Trasform(mquad,Pquad);
+dsX.AddHyperCubeTrasform(-1*ones(dim,1),1*ones(dim,1));
+
+indd = dsX.p<1e-70;
+dsX.p(indd) = 1e-70;
+
+dsX.SortByProb('descend');
+
+logpn = dsX.getlogProb();
+
 if isempty(Xmctest)==0
-    Zmctest = zeros(size(Xmctest));
-    Nmctest = size(Xmctest,1);
+    [Xnmctest,~] = dsX.ApplyAffineTransform_Original2Final(Xmctest, zeros(size(Xmctest,1),1) );
 end
 if isempty(Xtruth)==0
-    Ztruth = zeros(size(Xtruth));
-    Ntruth = size(Xtruth,1);
+    [Xntruth,~] =  dsX.ApplyAffineTransform_Original2Final(Xtruth, zeros(size(Xtruth,1),1) );
 end
-
-Psqrt=sqrtm(P);
-Psqrt_inv=inv(sqrtm(P));
-for i=1:N
-    Z(i,:)=Psqrt_inv*(X(i,:)-m')';
-end
-if isempty(Xmctest)==0
-    for i=1:Nmctest
-        Zmctest(i,:)=Psqrt_inv*(Xmctest(i,:)-m')';
-    end
-end
-if isempty(Xtruth)==0
-    for i=1:Ntruth
-        Ztruth(i,:)=Psqrt_inv*(Xtruth(i,:)-m')';
-    end
-end
-
-pn=probs*det(Psqrt);
-
-% remove points outside 10-sigma
-ind = sqrt(sum(Z.^2,2))<10*sqrt(c);
-Z=Z(ind,:);
-pn=pn(ind);
-N=size(Z,1);
-
-% do hyopercube scalling
-mn = min(Z,[],1);
-Xn=zeros(size(Z));
-
-for i=1:N
-    Xn(i,:)=Z(i,:)-mn;
-end
-if isempty(Xmctest)==0
-    Xnmctest=zeros(size(Zmctest));
-    for i=1:Nmctest
-        Xnmctest(i,:)=Zmctest(i,:)-mn;
-    end
-end
-if isempty(Xtruth)==0
-    Xntruth=zeros(size(Ztruth));
-    for i=1:Ntruth
-        Xntruth(i,:)=Ztruth(i,:)-mn;
-    end
-end
-
-mx = max(Xn,[],1);
-Atransf=diag(2./mx);
-mulin = -2*mn(:)./mx(:)-1;
-for i=1:N
-    Xn(i,:)=Atransf*Xn(i,:)'-1;
-end
-if isempty(Xmctest)==0
-    for i=1:Nmctest
-        Xnmctest(i,:)=Atransf*Xnmctest(i,:)'-1;
-    end
-end
-if isempty(Xtruth)==0
-    for i=1:Ntruth
-        Xntruth(i,:)=Atransf*Xntruth(i,:)'-1;
-    end
-end
-
-
-detAtransf = det(Atransf);
-
-% get full prob transformation
-pn=pn/det(Atransf);
-ind=pn<1e-70;
-pn(ind)=1e-70;
-
-% sort the points from highest to lowets prob
-[~,ind]=sort(pn(:),1,'descend');
-pn=pn(ind);
-Xn=Xn(ind,:);
-
-logpn = log(pn);
 
 
 %% plottinmg
 
-figure(23)
-if plotsconf.fig3.holdon
-    hold on
-end
-plot3(X(:,1),X(:,2),log(probs),plotsconf.fig3.markercol)
-
-% if isempty(Xmctest)==0
-%     plot(Xmctest(:,1),Xmctest(:,2),'ro')
-% end
-% if isempty(Xtruth)==0
-%     plot(Xtruth(:,1),Xtruth(:,2),'k*')
-% end
-xlabel('x')
-ylabel('y')
-axis equal
-axis square
-hold off
-saveas(gcf,[plotfolder,'/TrueProbPoints_',plotsconf.nametag,'_',num2str(Tk)],'png')
-saveas(gcf,[plotfolder,'/TrueProbPoints_',plotsconf.nametag,'_',num2str(Tk)],'fig')
-
-
 figure(33)
-plot3(Xn(:,1),Xn(:,2),log(pn),'ro')
-hold on
-title(['time step = ',num2str(Tk)])
+dsX.PlotPointsProbs3D([1,2],'ro');
+hold on 
 if isempty(Xmctest)==0
-    plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
+plot(Xnmctest(:,1),Xnmctest(:,2),'bs')
 end
-if isempty(Xntruth)==0
-    plot(Xntruth(:,1),Xntruth(:,2),'k*')
+if isempty(Xtruth)==0
+plot(Xntruth(:,1),Xntruth(:,2),'k*')
 end
+title(['true points and MC: time step = ',num2str(Tk)])
+hold off
 
-% plot3(Y(:,1),Y(:,2),log(pn),'ro')
 %% First fit Ngcomp gaussian components to the points
 
-idx = kmeans(Xn,Ngcomp);
-comps =cell(Ngcomp,1);
-Ag=zeros(N,Ngcomp);
-bg=pn;
-for i=1:Ngcomp
-   xx=Xn(idx==i,:) ;
-   ww=pn(idx==i);
-   [mcp,pcp]=MeanCov(xx,ww/sum(ww));
-   comps{i} = {mcp(:),pcp}; 
-   Ag(:,i)=mvnpdf(Xn,mcp(:)',pcp);
-end
+GMMfitter = GMMFitDataSet(dsX.X,dsX.p);
+% GMM = GMMfitter.FitGMM_1comp();
+GMM = GMMfitter.FitGMM_kmeans_optimwt(5);
 
-cvx_begin
-    variables wg(Ngcomp) t(N)
-    minimize( norm(wg,1)+5*norm(t,2))
-    subject to
-    Ag*wg==bg+t
-    wg>0
-    t<0
-    sum(wg)==1
-cvx_end
+% figure(36)
+% GMMfitter.plotGMMpointsHUll([1,2],2,'ro')
 
-pdfcomp.Ngcomp=Ngcomp;
-pdfcomp.comps = comps;
-pdfcomp.func = @(x)GaussSumMix(x,Ngcomp,wg,comps) ;
+figure(34)
+GMMfitter.plotGMMpoints([1,2],'ro')
+title('GMM fit points')
+hold off
 
-keyboard
+figure(35)
+GMMfitter.plotGMMSurf([1,2],'ro')
+title('GMM fit surf')
+hold off
+
+% keyboard
 %% fitting poly to log of probas
 % keyboard
 
 Pf=Basis_polyND(dim,Nm);
-Nlam = length(Pf);
-% now interpolate the polynomials to Xn and logpn
-% Nleastfit = 3*length(Pf);
-
-A=zeros(N,Nlam);
-tic
-for r=1:1:N
-    A(r,:) = evaluate_MatrixOfPolys(Pf,Xn(r,:));
-end
-% lam = A\log(pn);
-% disp('norm fit')
-% [rank(A),max(abs(A*lam-log(pn))),min(lam),max(lam)]
-% toc
-% evaluate_polyND(Pf{65},Xn(11,:))
-% evaluate_polyND_3(Pf{65},Xn(11,:))
 
 
-% keyboard
 
 %% reguralization points
-rad=max(sqrt(sum(Xn.^2,2)));
-Xbnd=[]
-% Xbnd=[Xbnd;2.5*gen_uniform_grid(8,dim)];
-% Xbnd=GH_points(zeros(dim,1),eye(dim),6);
-% Xbnd=3*Xbnd/max(max(Xbnd));
-% Xbnd = [Xbnd;3*(rand(3500,dim)*2-1)];
-[Xbnd1,~] = GLgn_pts(-2.5*ones(1,dim),2.5*ones(1,dim),5);
-% [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),8);
-% Xbnd2=2.5*(rand(200,dim)*2-1);
-Xbnd2=2.5*gen_uniform_grid(6,dim);
-Xbnd = [Xbnd1;Xbnd2];
-% Xbnd=1*Xbnd(sqrt(sum(Xbnd.^2,2))>1.5*rad,:);
-[size(Xbnd),Nlam]
-removeind=[];
-tic
-for i=1:size(Xbnd,1)
-    Idx = knnsearch(Xn,Xbnd(i,:),'K',10);
-    x = Xn(Idx,:);
-    mr = mean(x,1);
-    r  = max(sqrt(sum((x - repmat(mr,size(x,1),1)).^2)));
-    %     if norm(Xbnd(i,:)-mr)<0.5
-    if norm(Xbnd(i,:)-mr)<2*r
-        removeind=[removeind,i];
-    end
-    %     end
-end
-toc
-size(Xbnd,1)
-Xbnd(removeind,:)=[];
-figure(35)
-plot3(Xn(:,1),Xn(:,2),log(pn),'ro')
+
+Xineq=[];
+[Xbnd1,~] = GLgn_pts(-1.5*ones(1,dim),1.5*ones(1,dim),4);
+
+% SS = mvurnd(-2*ones(dim,1),2*ones(dim,1),10000);
+
+% Xbnd2=2.5*gen_uniform_grid(3,dim);
+% Xbnd2=5*gen_uniform_grid(5,dim);
+Xineq = [Xbnd1];
+
+GMMfitter.SetGMM_Hull();
+indbnd = GMMfitter.IsInsideHull(Xineq,2);
+Xineq = Xineq(~indbnd,:);
+
+figure(36)
+GMMfitter.plotGMMpointsHUll([1,2],2,'ro')
 hold on
-plot3(Xbnd(:,1),Xbnd(:,2),-ones(size(Xbnd,1),1),'b+')
+plot3(Xineq(:,1),Xineq(:,2),-ones(size(Xineq,1),1),'b+')
 hold off
+title('GMM HUll')
 
-%
-tic
-M=size(Xbnd,1);
-Dineq = zeros(M,length(Pf));
-for r=1:1:M
-    Dineq(r,:) = evaluate_MatrixOfPolys(Pf,Xbnd(r,:));
+Nineq = size(Xineq,1);
+%% full pdf without gaussian
+% keyboard
+
+LB=-2.5*ones(dim,1);
+UB=2.5*ones(dim,1);
+
+LBtest=-1.5*ones(dim,1);
+UBtest=1.5*ones(dim,1);
+
+XtestingMC = mvurnd(LB,UB,20000);
+
+% Xineq = Xineq(1,:);
+% Pf=Basis_polyND(dim,4);
+
+while 1
+    
+    ExpPolyfitter = PolyFit(dsX.X,dsX.p);
+%     mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_Aineq(Pf,Xineq,XtestingMC);
+    mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_AdaptiveC(Pf,XtestingMC);
+    
+    SS = mvurnd(LB,UB,10000);
+    pSS = evaluate_PolyforLargetSetX(mxentpoly_norm,SS);
+    ind = pSS>max(log(dsX.p));
+    
+    figure(37)
+    ExpPolyfitter.PlotExpPolyFits([1,2],LB,UB)
+    title(['no gaussian: direct fit for k = ',num2str(Tk)])
+    hold off
+    
+    figure(40)
+    ExpPolyfitter.PlotExpPolyFits_points([1,2],-1*ones(dim,1),ones(dim,1))
+    hold off
+    
+    
+%     keyboard
+    
+%     if sum(ind)==0
+%         disp('All probs are in the bounds')
+        break
+%     end
+    % Xbnd2=2.5*gen_uniform_grid(3,dim);
+    Xineq = [Xineq;SS(ind,:)];
+    
+    
+
 end
-toc
-
-tic
-[Xmax,~] = GLgn_pts(-1*ones(1,dim),1*ones(1,dim),6);
-Tineq = zeros(size(Xmax,1),length(Pf));
-for r=1:1:size(Xmax,1)
-    Tineq(r,:) = evaluate_MatrixOfPolys(Pf,Xmax(r,:));
-end
-toc
-%%
-reducedpn = pn - pdfcomp.func(Xn);
-factconst = max(reducedpn)/10;
-pnfit = reducedpn/factconst;
-logpnfit = log(pnfit);
-
-% [~,ind]=sort(pnfit(:),1,'descend');
-% logppnfit=log(pnfit(ind));
-% AAn=A(ind,:);
-% logppnfit=logppnfit(:);
-
-
-
-lamdim=Nlam;
-K = (min(logpnfit)-1)*ones(size(Dineq,1),1);
-KK=K;
-DD=Dineq;
-Atop=A(1:50,:);
-logpntop = logpnfit(1:50);
-lenconstr = length(logpnfit);
-
-% %working good
-%     minimize( 10*norm(lam2,1)+50*norm(t,2)+150*norm(t2,2))
-CC=[0.1];
-LAMS=zeros(lamdim,length(CC));
-costs = zeros(1,length(CC));
-for ci = 1:length(CC)
-    cvx_begin
-    variables t2(50) t(lenconstr) lam2(lamdim)
-    minimize( CC(ci)*norm(lam2,1)+20*norm(t,2)+50*norm(t2,2))
-    subject to
-    DD*lam2 <= KK
-    A*lam2==logpnfit+t
-    Atop*lam2==logpntop+t2
-    Tineq*lam2<=max(logpnfit)
-    cvx_end
-    LAMS(:,ci)=lam2;
-    costs(ci) = norm(t,2);
-end
-[~,bind] = min(costs);
-lam2 = LAMS(:,bind);
-lam2(1) = lam2(1)+log(factconst);
-lamsol = lam2;
-
-keyboard
-
-%% normalizing and constructing normalized pdf
-
-
-mxentpoly_norm=zeros(1,dim+1);
-for i=1:length(lamsol)
-    mxentpoly_norm=add_sub_polyND(mxentpoly_norm, scalar_multiply_polyND(lamsol(i),Pf{i}),'add');
-end
-mxentpoly_norm=simplify_polyND(mxentpoly_norm);
+% fitstats_norm = TestPolyFits(mxentpoly_norm,dsX.X,log(dsX.p),LBtest,UBtest);
 
 pdfnorm.func=@(x)exp(evaluate_polyND(mxentpoly_norm,x));
 pdfnorm.polyeval=@(x)evaluate_polyND(mxentpoly_norm,x);
 pdfnorm.poly=mxentpoly_norm;
-pdfnorm.type = 'true-0I-hypercube-11';
+pdfnorm.info = 'true-0I-hypercube-11';
+pdfnorm.pdftype = 'ExpPdf';
 
-
-pdfnorm = normalize_exp_pdf(pdfnorm,Xn,mquad,Pquad,'GMM_MC');
-
-
-pdfnorm.trueX2normX = @(x)affineTransform(x,Atransf*Psqrt_inv,-Atransf*Psqrt_inv*mquad(:)+mulin(:));
-pdfnorm.normX2trueX = @(xn)affineTransform(xn,Psqrt*inv(Atransf),mquad(:)-Psqrt*inv(Atransf)*mulin(:));
-pdfnorm.normprob2trueprob = @(p)p/det(Psqrt*inv(Atransf));
-pdfnorm.trueprob2normprob = @(p)p*det(Psqrt*inv(Atransf));
-pdfnorm.minx = mn;
-pdfnorm.maxx = mx;
-pdfnorm.Pquad = Pquad;
-pdfnorm.mquad = mquad;
-% pdftransF.Xnorm0I2Xnorm11 = @(xn)Xnorm0I2Xnorm11(xn,minx,maxx,mquad,Pquad);
-% pdftransF.Xnorm112Xnorm0I = @(xn)Xnorm112Xnorm0I(xn,minx,maxx,mquad,Pquad);
-
-pdftrue = pdfnorm;
-pdftrue.func = @(xtr)pdfnorm.normprob2trueprob(exp(evaluate_polyND( mxentpoly_norm,pdfnorm.trueX2normX(xtr) ) ) );
-%% [pltiing and testing
 % keyboard
 
-Xt=[];
-[IDX,C] = kmeans(Xn, 3);
-for i=1:size(C,1)
-    if length(logpn(IDX==i))>dim*2
-        [mR,pR]=MeanCov(Xn(IDX==i,:),pn(IDX==i)/sum(pn(IDX==i)));
-        if all(eig(pR)>0)
-            Xt=[Xt;mvnrnd(mR,2^2*pR,1000)];
-        end
-    end
-end
-NMC=size(Xt,1);
-% NMC = 3000;
-% Xt = [mvnrnd(zeros(dim,1),0.001^2*eye(dim),NMC/3);mvnrnd(zeros(dim,1),0.1^2*eye(dim),NMC/3);mvnrnd(zeros(dim,1),1.5^2*eye(dim),NMC/3)];
-% At=zeros(NMC,length(Pf));
-% tic
-% for r=1:1:NMC
-%    At(r,:) = evaluate_MatrixOfPolys(Pf,Xt(r,:));
-% end
+pdfnorm = normalize_exp_pdf(pdfnorm,dsX.X,dsX.p,mquad,Pquad,GMM,'GMM_MC');
+pdfnorm.transForms = dsX.GetTrasnformers();
+% [Atranf2norm,mtransf2norm]=obj.GetAffineTransform_Original2Final();
+% [Atranf2true,mtransf2true]=obj.GetAffineTransform_Final2Original();
+% transForms.trueX2normX = @(x)affineTransform(x,Atranf2norm,mtransf2norm);
+% transForms.normX2trueX = @(xn)affineTransform(xn,Atranf2true,mtransf2true);
+% transForms.normprob2trueprob = @(p)p/det(Atranf2true);
+% transForms.trueprob2normprob = @(p)p/det(Atranf2norm);
 
-
-% lgpt=At*lamsol;
-try
-    lgpt=pdfnorm.polyeval(Xt);
-catch
-    keyboard
-end
-lgbnd = pdfnorm.polyeval(Xbnd);
-lgpnest = pdfnorm.polyeval(Xn);
-% lgpt(lgpt>max(logpn))=-10;
-figure(33)
-plot3(Xn(:,1),Xn(:,2),log(pn),'ro',Xn(:,1),Xn(:,2),lgpnest,'b+',Xt(:,1),Xt(:,2),lgpt,'gs')
-title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-figure(34)
-plot3(Xn(:,1),Xn(:,2),pn,'ro',Xn(:,1),Xn(:,2),exp(lgpnest),'b+',Xt(:,1),Xt(:,2),exp(lgpt),'gs',Xbnd(:,1),Xbnd(:,2),exp(lgbnd),'k*')
-title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-% plot_nsigellip(,1,'r',2);
-
-%% marginal 0I 2D plots
-% keyboard
-
-
-% Xtrasf=pdfnorm.normX2trueX(Xn) ;
-%
-% figure
-% plot(X(:,1),X(:,2),'ro',Xtrasf(:,1),Xtrasf(:,2),'b+')
-
-plotmargs=1;
-
-if plotmargs == 1
-    if isempty(Xmctest)==0
-        ind = sqrt(sum(Xnmctest.^2,2))<2.3;
-        Xnmctest=Xnmctest(ind,:);
-    end
-    
-    [Xx,Xy]=meshgrid(linspace(-2,2,25),linspace(-2,2,25) );
-    % Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
-    margprobs = zeros(size(Xx));
-    margprobs_cell = cell(size(Xx,1),1);
-    
-    margprobs_gauss = zeros(size(Xx));
-    
-    [Xxtr,Xytr]=meshgrid(linspace(mquad(1)-2*sqrt(Pquad(1,1)),mquad(1)+2*sqrt(Pquad(1,1)),25),linspace(mquad(2)-2*sqrt(Pquad(2,2)),mquad(2)+2*sqrt(Pquad(2,2)),25) );
-    % Xp=[reshape(Xx,625,1),reshape(Xy,625,1)];
-    margprobs_true = zeros(size(Xxtr));
-    margprobs_cell_true = cell(size(Xxtr,1),1);
-%     keyboard
-    
-    [Mn,Pn]=MeanCov(Xn,pn/sum(pn));
-
-    parfor i=1:size(Xx,1)
-        margprobs_cell{i} = zeros(size(Xx,2),1);
-        margprobs_cell_true{i}= zeros(size(Xxtr,2),1);
-        for j=1:size(Xx,2)
-            margprobs_cell{i}(j) = get_2Dmarginalized_probs([Xx(i,j),Xy(i,j)],1,2,Xn,pn,NaN,NaN,pdfnorm,'ClusterMC');
-            margprobs_cell_true{i}(j) = get_2Dmarginalized_probs([Xxtr(i,j),Xytr(i,j)],1,2,X,probs,NaN,NaN,pdftrue,'ClusterMC');
-            
-        end
-    end
-    for i=1:size(Xx,1)
-        for j=1:size(Xx,2)
-            margprobs_gauss(i,j) = mvnpdf([Xx(i,j),Xy(i,j)],Mn(1:2)',Pn(1:2,1:2));
-        end
-    end
-    
-    for i=1:size(Xx,1)
-        margprobs(i,:) = margprobs_cell{i};
-        margprobs_true(i,:) = margprobs_cell_true{i};
-    end
-    
-    
-    
-    
-    figure(1)
-    if plotsconf.fig3.holdon
-        hold on
-    end
-    contour(Xx,Xy,margprobs,15,plotsconf.fig3.contcol)
-        hold on
-%     if plotsconf.fig3.holdon
-        if isempty(Xmctest)==0
-            plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
-        end
-        if isempty(Xntruth)==0
-            plot(Xntruth(:,1),Xntruth(:,2),'k*')
-        end
-%     end
-    
-    %     plot(Xt(:,1),Xt(:,2),'g*')
-    title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-    xlabel('x')
-    ylabel('y')
-    axis equal
-    axis square
-    hold off
-    saveas(gcf,[plotfolder,'/NormContour_',plotsconf.nametag,'_',num2str(Tk)],'png')
-    saveas(gcf,[plotfolder,'/NormContour_',plotsconf.nametag,'_',num2str(Tk)],'fig')
-    
-    figure(2)
-    if plotsconf.fig3.holdon
-        hold on
-    end
-    surf(Xx,Xy,margprobs,'FaceColor',plotsconf.fig3.contcol,'EdgeColor','none','FaceAlpha',0.4);
-    hold on
-    surf(Xx,Xy,margprobs_gauss,'FaceColor','g','EdgeColor','none','FaceAlpha',0.4);
-    hold off
-    camlight right; lighting phong  
-    alpha 0.4
-    %     hold on
-%     if plotsconf.fig3.holdon
-        hold on
-        if isempty(Xmctest)==0
-            plot(Xnmctest(:,1),Xnmctest(:,2),'ro')
-        end
-        if isempty(Xntruth)==0
-            plot(Xntruth(:,1),Xntruth(:,2),'k*')
-        end
-        hold off
-%     end
-    
-    %     plot(Xt(:,1),Xt(:,2),'g*')
-    title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-    view([-10,32])
-    xlabel('x')
-    ylabel('y')
-    axis equal
-    axis square
-    hold off
-    saveas(gcf,[plotfolder,'/NormSurf_',plotsconf.nametag,'_',num2str(Tk)],'png')
-    saveas(gcf,[plotfolder,'/NormSurf_',plotsconf.nametag,'_',num2str(Tk)],'fig')
-    %-------------------------------------------------------------------------------
-    figure(3)
-    if plotsconf.fig3.holdon
-        hold on
-    end
-    surf(Xxtr,Xytr,margprobs_true,'FaceColor',plotsconf.fig3.contcol,'EdgeColor','none','FaceAlpha',0.7);
-    camlight right; lighting phong  
-    alpha 0.7
-    %     hold on
-    if plotsconf.fig3.holdon
-        if isempty(Xmctest)==0
-            plot(Xmctest(:,1),Xmctest(:,2),'ro')
-        end
-        if isempty(Xtruth)==0
-            plot(Xtruth(:,1),Xtruth(:,2),'k*')
-        end
-    end
-    
-    %     plot(Xt(:,1),Xt(:,2),'g*')
-    title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
-    xlabel('x')
-    ylabel('y')
-    axis equal
-    axis square
-    hold off
-    saveas(gcf,[plotfolder,'/TrueSurf_',plotsconf.nametag,'_',num2str(Tk)],'png')
-    saveas(gcf,[plotfolder,'/TrueSurf_',plotsconf.nametag,'_',num2str(Tk)],'fig')
-    
-    
-end
-disp('Done marg')
 
 %%
+% cm=1;
+% pdiff=(dsX.p)./GaussSumMix(dsX.X,GMM);
+% if any(pdiff<=0)
+%     keyboard
+% end
+% 
+% % mndiff = min(diff) - cm;
+% % mndiff = 1*mndiff;
+% % pdiff = diff - mndiff;
+% 
+% % Pf=Basis_polyND(dim,6);
+% ExpPolyfitter = PolyFit(dsX.X,pdiff);
+% mxentpoly_normGM = ExpPolyfitter.fitExpPoly_A_Atop_Aineq(Pf,Xineq);
+% figure(38)
+% ExpPolyfitter.PlotExpPolyFits([1,2],LB,UB)
+% title('gaussian base: diff fit')
+% hold off
+% 
+% fitstats_normGM = TestPolyFits(mxentpoly_normGM,dsX.X,log(pdiff),LBtest,UBtest);
+% 
+% pdfnormGM1.func =@(x)GaussSumMix(x,GMM).*exp(evaluate_polyND(mxentpoly_normGM,x));
+% pdfnormGM1.info = 'SingleGMMComp-true-0I-hypercube-11';
+% pdfnormGM1.pdftype = 'HybridPdf';
+% 
+% pdfnormGM1 = normalize_exp_pdf(pdfnormGM1,dsX.X,dsX.p,mquad,Pquad,'GMM_MC');
+% pdfnormGM1.transForms = dsX.GetTrasnformers();
+% 
+% keyboard
 
-% mxentpoly=linear_transform_poly(mxentpoly_norm,Psqrt_inv,-Psqrt_inv*m(:));
-%
-%
-% c=1/det(Psqrt);
-% cexp = -log(det(Psqrt));
-% c0 = get_coeff_NDpoly(mxentpoly,zeros(1,dim));
-% mxentpoly = update_or_insert_coeff_NDpoly(mxentpoly,zeros(1,dim),c0+cexp);
-%
-% pdf.func=@(x)exp(evaluate_polyND(mxentpoly,x));
-% pdf.poly=mxentpoly;
+%% Fit statistics
 
+% ErrApproaches = [100*(pdfnormGM1.func(dsX.X)-dsX.p)./dsX.p,100*(pdfnorm.func(dsX.X)-dsX.p)./dsX.p];
+ErrApproaches = [100*(log(pdfnorm.func(dsX.X))-log(dsX.p))./log(dsX.p)];
+mmbin = min(min(ErrApproaches,[],1));
+mxbin = max(max(ErrApproaches,[],1));
 
-disp('Debug Stats-----')
-stats.k=Tk;
-stats.detPsqrt=det(Psqrt);
-stats.min_pn=min(pn);
-stats.max_pn=max(pn);
-stats.cond=cond(Pquad);
-stats
+mmbin=max(mmbin,-300);
+mxbin=min(mxbin,300);
 
+figure(39)
+histogram(ErrApproaches(:,1),100,'facecolor','r','facealpha',0.5) 
+% hold on
+% histogram(ErrApproaches(:,2),linspace(mmbin,mxbin,100),'facecolor','b','facealpha',0.5) 
+legend('Full')
+% hold off
+title(['Error st for k = ',num2str(Tk)])
 
 % keyboard
 

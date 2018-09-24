@@ -22,7 +22,15 @@ classdef DataSet < handle
             obj.Xorig=X;
             obj.porig=p;
         end
-        
+        function ds = MakeCopy(obj)
+            ds = DataSet(obj.X,obj.p,obj.originalState);
+            ds.affinetransforms=obj.affinetransforms;
+            ds.cntrans=0;
+            ds.originalState='TrueState';
+        end
+        function [mm,PP] = GetMeanCov(obj)
+           [mm,PP] = MeanCov(obj.X,obj.p/sum(obj.p)); 
+        end
         function obj = AddAffineTrasform(obj,A,m)
             m=m(:);
             obj.cntrans=obj.cntrans+1;
@@ -75,6 +83,15 @@ classdef DataSet < handle
             [Aof,mof]=obj.GetAffineTransform_Original2Final();
             A=inv(Aof);
             m=-A*mof;
+        end
+        function transForms = GetTrasnformers(obj)
+            [Atranf2norm,mtransf2norm]=obj.GetAffineTransform_Original2Final();
+            [Atranf2true,mtransf2true]=obj.GetAffineTransform_Final2Original();
+            transForms.trueX2normX = @(x)affineTransform(x,Atranf2norm,mtransf2norm);
+            transForms.normX2trueX = @(xn)affineTransform(xn,Atranf2true,mtransf2true);
+            transForms.normprob2trueprob = @(p)p/det(Atranf2true);
+            transForms.trueprob2normprob = @(p)p/det(Atranf2norm);
+            
         end
         function obj = Reset2Original(obj)
             [A,m]=obj.GetAffineTransform_Final2Original();

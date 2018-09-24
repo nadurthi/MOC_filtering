@@ -16,6 +16,6 @@ th=atan2(xenu(1),xenu(2));
 phi=atan2(sqrt(xenu(1)^2+xenu(2)^2),xenu(3));
 
 
-h=[r;th;phi];
+h=[th;phi];
 
 end

@@ -1,4 +1,4 @@
-function h=radmodel_2D(x,Rearth)
+function h=radmodel_2D(x)
 
 
 x=x(1:2);
@@ -7,7 +7,7 @@ x=x(:);
 % x=x'-ecef_ref(Srad,:);
 % xenu = ecef2enu(x*1e3,ecef_ref(Srad,:)*1e3)/1000;
 
-xenu=x-[Rearth,0]';
+xenu=x;
 
 % xenu(:)';
 r=norm(xenu);
@@ -16,6 +16,6 @@ th=atan2(xenu(1),xenu(2));
 
 
 % h=[r;th];
-h=r;
+h=th;
 
 end
