@@ -4,11 +4,11 @@ N=n^5;
 X1 = zeros(N,n);
 
 % ph1,ph2,ph3,ph4,ph5
-ph1 =linspace(10*pi/180,170*pi/180,n);
-ph2 =linspace(10*pi/180,170*pi/180,n);
-ph3 =linspace(10*pi/180,170*pi/180,n);
-ph4 =linspace(10*pi/180,170*pi/180,n);
-ph5 =linspace(10*pi/180,350*pi/180,n);
+ph1 =linspace(0*pi/180,180*pi/180,n);
+ph2 =linspace(0*pi/180,180*pi/180,n);
+ph3 =linspace(0*pi/180,180*pi/180,n);
+ph4 =linspace(0*pi/180,180*pi/180,n);
+ph5 =linspace(0*pi/180,360*pi/180,n);
 
 a=1;
 b=1;

@@ -16,7 +16,7 @@ classdef GMMFitDataSet < handle
         end
         
         function GMM = FitGMM_1comp(obj)
-            % DEPRECATED: Specify use case before using as it si notc clear             
+            % DEPRECATED: Specify use case before using as it si notc clear
             [N,dim]=size(obj.X);
             Ntop = max(floor(N/10),2*dim+5);
             [mm,PP] = MeanCov(obj.X(1:Ntop,:),obj.p(1:Ntop)/sum(obj.p(1:Ntop)));
@@ -37,29 +37,29 @@ classdef GMMFitDataSet < handle
         end
         %%
         function GMM = FitGMM_kmean_equalwt(obj,NgcompMax)
-%             flg=1;
-%             prevIDX=0;
-%             for Nclust = 1:NgcompMax
-%                 [IDX,C] = kmeans(obj.X, Nclust);
-%                 for i=1:size(C,1)
-%                     [m,pR]=MeanCov(obj.X(IDX==i,:),obj.p(IDX==i)/sum(obj.p(IDX==i)));
-%                     egs = eig(pR);
-%                     if any(egs<0) || cond(pR)>5000
-%                         flg=0;
-%                         break
-%                     end
-%                     if flg==0
-%                         break;
-%                     end
-%                 end
-%                 if flg==0
-%                     break;
-%                 end
-%                 prevIDX = IDX;
-%                 
-%             end
-            IDX = GenerateClusterIndexes(obj.X,NgcompMax,'gmm');
-%             IDX = prevIDX;
+            %             flg=1;
+            %             prevIDX=0;
+            %             for Nclust = 1:NgcompMax
+            %                 [IDX,C] = kmeans(obj.X, Nclust);
+            %                 for i=1:size(C,1)
+            %                     [m,pR]=MeanCov(obj.X(IDX==i,:),obj.p(IDX==i)/sum(obj.p(IDX==i)));
+            %                     egs = eig(pR);
+            %                     if any(egs<0) || cond(pR)>5000
+            %                         flg=0;
+            %                         break
+            %                     end
+            %                     if flg==0
+            %                         break;
+            %                     end
+            %                 end
+            %                 if flg==0
+            %                     break;
+            %                 end
+            %                 prevIDX = IDX;
+            %
+            %             end
+            IDX = GenerateClusterIndexes(obj.X,NgcompMax,'kmeans');
+            %             IDX = prevIDX;
             Nclust = max(IDX);
             obj.GMM.w = ones(Nclust,1)/Nclust;
             obj.GMM.mx = cell(Nclust,1);
@@ -87,10 +87,10 @@ classdef GMMFitDataSet < handle
             
             cvx_begin
             variables wg(Ngcomp) t(Np)
-            minimize( norm(Ag*wg-bg) )
+            minimize( norm(Ag*wg-bg,1) )
             subject to
-            wg>=0
-            sum(wg)==1
+            wg>=0;
+            sum(wg)==1;
             cvx_end
             wg = wg+0.0001;
             wg = wg/sum(wg);
@@ -107,18 +107,25 @@ classdef GMMFitDataSet < handle
         function GMMhull = SetGMM_Hull(obj)
             NgcompMax = 3;
             %             obj.GMMhull = GetGMM_kmeans_Hull_impl(obj.X);
-%             obj.GMMhull = GetGMM_AggClust_Hull_impl(obj.X);
-            obj.GMMhull = GetGMM_Hull_impl(obj.X,NgcompMax,'gmm');
+            %             obj.GMMhull = GetGMM_AggClust_Hull_impl(obj.X);
+            obj.GMMhull = GetGMM_Hull_impl(obj.X,NgcompMax,'kmeans');
             GMMhull = obj.GMMhull;
         end
         
         function ind = IsInsideHull(obj,Xtest,factor)
             ind = zeros(size(Xtest,1),1);
+%             for nc = 1:obj.GMMhull.Ngcomp
+%                 mm = obj.GMMhull.mx{nc};
+%                 PP = obj.GMMhull.Px{nc};
+%                 ind = ind | CheckifInsideEllipsoid(Xtest,mm,factor*PP);
+%             end
             for nc = 1:obj.GMMhull.Ngcomp
-                mm = obj.GMMhull.mx{nc};
-                PP = obj.GMMhull.Px{nc};
-                ind = ind | CheckifInsideEllipsoid(Xtest,mm,factor*PP);
+                A = obj.GMMhull.A{nc};
+                b = obj.GMMhull.b{nc};
+                ind = ind | CheckifInsideEllipsoid_Abmethod(Xtest,A,b,factor);
             end
+
+            
         end
         %%
         function plotGMMpoints(obj,states,c)
@@ -142,7 +149,7 @@ classdef GMMFitDataSet < handle
             for i=1:size(xx,1)
                 for j=1:size(xx,2)
                     for nk=1:obj.GMM.Ngcomp
-                        GMMprobs(i,j) = GMMprobs(i,j) + obj.GMM.w(nk)*mvnpdf([xx(i,j),yy(i,j)],obj.GMM.mx{nk}',obj.GMM.Px{nk});
+                        GMMprobs(i,j) = GMMprobs(i,j) + obj.GMM.w(nk)*mvnpdf([xx(i,j),yy(i,j)],obj.GMM.mx{nk}(states)',obj.GMM.Px{nk}(states,states));
                     end
                 end
             end
@@ -211,8 +218,9 @@ for Ngcomp=3:NgcompMax
             flg=0;
             break
         end
-        if cond(pcp)>5000
+        if cond(pcp)>5000000
             disp('***********\n cond(pcp)>5000 \n *******************')
+            cond(pcp)
             disp(Ngcomp)
             flg=0;
             break
@@ -240,6 +248,8 @@ idx = GenerateClusterIndexes(X,NgcompMax,method);
 Ngcomp = max(idx);
 MF =cell(Ngcomp,1);
 PF =cell(Ngcomp,1);
+AF=cell(Ngcomp,1);
+BF=cell(Ngcomp,1);
 
 for i=1:Ngcomp
     xx=X(idx==i,:) ;
@@ -249,40 +259,42 @@ for i=1:Ngcomp
     xx = xx';
     [n,m] = size(xx);
     cvx_begin
-        variable A(n,n) symmetric
-        variable b(n)
-        maximize( det_rootn( A ) )
-        subject to
-            norms( A * xx + b * ones( 1, m ), 2 ) <= 1;
+    variable A(n,n) symmetric
+    variable b(n)
+    maximize( det_rootn( A ) )
+    subject to
+    norms( A * xx + b * ones( 1, m ), 2 ) <= 1;
     cvx_end
-
-%     for c = 1:1:1000
-%         ind = CheckifInsideEllipsoid(xx,mcp,c*pcp);
-%         if prod(ind)==1
-%             break
-%         end
-%     end
-% keyboard
- 
-    MF{i} = -inv(A)*b;
-    PF{i} = inv(A);
     
+    %     for c = 1:1:1000
+    %         ind = CheckifInsideEllipsoid(xx,mcp,c*pcp);
+    %         if prod(ind)==1
+    %             break
+    %         end
+    %     end
+    % keyboard
+    
+    MF{i} = -inv(A)*b;
+    PF{i} = inv(A*A);
+    AF{i} = A;
+    BF{i} = b;
 end
 GMMhull.w = ones(Ngcomp,1)/Ngcomp;
 GMMhull.mx = MF;
 GMMhull.Px = PF;
 GMMhull.Ngcomp = Ngcomp;
-
+GMMhull.A = AF;
+GMMhull.b = BF;
 end
 
-% 
+%
 % function GMMhull = GetGMM_kmeans_Hull_impl(X)
 % [N,dim] = size(X);
 % MF ={};
 % PF ={};
-% 
+%
 % for Ngcomp=1:10
-%     
+%
 %     idx = kmeans(X,Ngcomp);
 %     Mcomps =cell(Ngcomp,1);
 %     Pcomps =cell(Ngcomp,1);
@@ -325,12 +337,24 @@ end
 %         break
 %     end
 % end
-% 
+%
 % GMMhull.w = ones(length(MF),1)/length(MF);
 % GMMhull.mx = MF;
 % GMMhull.Px = PF;
 % GMMhull.Ngcomp = length(MF);
 % end
+
+
+function ind = CheckifInsideEllipsoid_Abmethod(X,A,b,factor)
+[N,dim] = size(X);
+ind = zeros(N,1);
+for i=1:N
+    ind(i)=norm(A*X(i,:)'+b,2)<=1*factor;
+end
+end
+
+
+
 
 function ind = CheckifInsideEllipsoid(X,m,P)
 m=m(:);

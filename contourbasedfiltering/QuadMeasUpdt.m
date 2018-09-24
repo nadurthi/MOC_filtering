@@ -20,7 +20,7 @@ end
 [X,w]=qd_pts(xf,Pf);
 
 Npts = size(X,1);
-Z=zeros(model.hn,1);
+Z=zeros(Npts,model.hn);
 for i=1:Npts
     Z(i,:) = model.h(X(i,:)');
 end

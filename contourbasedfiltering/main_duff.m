@@ -97,8 +97,9 @@ Npf = 5000; %paricle filter points
 
 % generate points on contours for characterisitc solutions
 
+model.pointGenerator = @(mx,Px)GH_points(mx,Px,11);
+[X,w] = model.pointGenerator(zeros(model.fn,1),0.5^2*eye(model.fn));
 
-[X,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),11);
 
 % [X,w] = mvnrnd(zeros(4,1),0.5*eye(4),500);
 

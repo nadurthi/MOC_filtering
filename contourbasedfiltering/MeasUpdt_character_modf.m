@@ -28,6 +28,12 @@ probsXpost = exp(logprobsXpost);
 
 %% Estimate normalizing constant
 
+% keyboard
+figure
+plot3(X(:,1),X(:,2),probs,'ro')
+hold on
+plot3(X(:,1),X(:,2),probsXpost,'b+')
+
 [mX,PX] = MeanCov(X,probsXpost/sum(probsXpost));
 % fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
 pdfXpostnorm = get_interp_pdf_0I_boostmixGaussian(X,probsXpost,mX,PX,Nm,3,Tk,Xmc,Xtruth);
@@ -36,8 +42,8 @@ pdfXpostnorm = get_interp_pdf_0I_boostmixGaussian(X,probsXpost,mX,PX,Nm,3,Tk,Xmc
 % probsXpost2=pdfXpostnorm.normprob2trueprob(py);
 
 %% Re-sample/ regenerate points
-
-[Xpost_resample,~] = GH_points(mX,0.5^2*PX,Npts);
+[Xpost_resample,~] = model.pointGenerator(mX,0.5^2*PX);
+% [Xpost_resample,~] = GH_points(mX,0.5^2*PX,Npts);
 
 y=pdfXpostnorm.transForms.trueX2normX(Xpost_resample);
 py=pdfXpostnorm.func(y);
