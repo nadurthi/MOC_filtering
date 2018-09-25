@@ -1,0 +1,42 @@
+dsX = DataSet(X,probs,'TrueState');
+[N,dim] =size(X);
+
+
+dsX.AddMeanCov_to_OI_Trasform(mX,PX);
+dsX.AddHyperCubeTrasform(-1*ones(dim,1),1*ones(dim,1));
+
+indd = dsX.p<1e-70;
+dsX.p(indd) = 1e-70;
+
+dsX.SortByProb('descend');
+
+logpn = dsX.getlogProb();
+
+figure(33)
+dsX.PlotPointsProbs3D([1,2],'ro');
+
+%%
+clc
+LB=-1.5*ones(dim,1);
+UB=1.5*ones(dim,1);
+
+LBtest=-1.5*ones(dim,1);
+UBtest=1.5*ones(dim,1);
+
+Xbnd2=5*gen_uniform_grid(5,dim);
+XtestingMC = mvurnd(LB,UB,5);
+
+ idx = knnsearch(dsX.X,XtestingMC,'K',5,'Distance','euclidean');
+ 
+ pmc = mean(dsX.p(idx),2);
+ 
+%  pmc = exp(logpmc);
+
+ states = [1,2]
+figure(33)
+plot3(dsX.X(:,1),dsX.X(:,2),dsX.p,'ro')
+hold on
+plot3(XtestingMC(:,1),XtestingMC(:,2),pmc,'b+')
+% Vmc = interpn(dsX.X(:,1),dsX.X(:,2),dsX.X(:,3),dsX.X(:,4),dsX.X(:,6),dsX.X(:,6),logpn,XtestingMC(:,1),XtestingMC(:,2),XtestingMC(:,3),XtestingMC(:,4),XtestingMC(:,5),XtestingMC(:,6));
+
+

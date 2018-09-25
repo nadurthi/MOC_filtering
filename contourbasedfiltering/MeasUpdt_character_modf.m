@@ -36,7 +36,8 @@ plot3(X(:,1),X(:,2),probsXpost,'b+')
 
 [mX,PX] = MeanCov(X,probsXpost/sum(probsXpost));
 % fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
-pdfXpostnorm = get_interp_pdf_0I_boostmixGaussian(X,probsXpost,mX,PX,Nm,3,Tk,Xmc,Xtruth);
+% pdfXpostnorm = get_interp_pdf_0I_boostmixGaussian(X,probsXpost,mX,PX,Nm,3,Tk,Xmc,Xtruth);
+pdfXpostnorm = get_interp_pdf_0I_localInterp(X,probsXpost,mX,PX,Nm,3,Tk,Xmc,Xtruth);
 % y=pdfXpostnorm.trueX2normX(X);
 % py=pdfXpostnorm.func(y);
 % probsXpost2=pdfXpostnorm.normprob2trueprob(py);

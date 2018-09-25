@@ -104,8 +104,8 @@ classdef GMMFitDataSet < handle
             
         end
         %% Hulling operations
-        function GMMhull = SetGMM_Hull(obj)
-            NgcompMax = 3;
+        function GMMhull = SetGMM_Hull(obj,NgcompMax)
+%             NgcompMax = 3;
             %             obj.GMMhull = GetGMM_kmeans_Hull_impl(obj.X);
             %             obj.GMMhull = GetGMM_AggClust_Hull_impl(obj.X);
             obj.GMMhull = GetGMM_Hull_impl(obj.X,NgcompMax,'kmeans');
@@ -222,8 +222,8 @@ for Ngcomp=3:NgcompMax
             disp('***********\n cond(pcp)>5000 \n *******************')
             cond(pcp)
             disp(Ngcomp)
-            flg=0;
-            break
+%             flg=0;
+%             break
         end
     end
     if isempty(previdx)

@@ -49,15 +49,13 @@ time.TvecPlots=time.t0: time.dtplot :time.tf;
 
 %% models
 
-model.f=@(dt,tk,xk)processmodel_2body(dt,1,tk,xk);
+model.f=@(dt,tk,xk)processmodel_2body_orb(dt,1,tk,xk);
 model.fn=6;
-model.Q = diag([0.00001^2,0.00001^2,0.00001^2,0.0000001^2,0.0000001^2,0.0000001^2]);
-model.Q(1:3,1:3)=model.Q(1:3,1:3)*constants.trueX2normX^2;
-model.Q(4:6,4:6)=model.Q(4:6,4:6)*constants.trueV2normV^2;
+model.Q = diag([0.0000001^2,0.0000001^2,0.0000001^2,0.0000001^2,0.0000001^2,0.0000001^2]);
 
-model.h=@(x)radmodel(x);
+model.h=@(x)radmodel_orb(x,1);
 model.hn=2;
-model.R=diag([(2*pi/180)^2,(2*pi/180)^2]);
+model.R=diag([(1*pi/180)^2,(1*pi/180)^2]);
 % model.R=diag([(0.1/constants.Re)^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
@@ -65,16 +63,13 @@ model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 %% generate truth
 
 x0=[10000,10,3000,-0.1,7.4,2]';
-OE = cart2orbelem(x0,constants.mu)
-% [ r, v, Ehat ] = FnG(0, time.dt, x0(1:3), x0(4:6), 1);
-% [ r1, v1, Ehat ] = FnG(0, time.dt, r, -v, 1);
-
-P0=diag([1^2,1^2,1^2,0.001^2,0.001^2,0.001^2]);
-
 x0(1:3)=x0(1:3)*constants.trueX2normX;
 x0(4:6)=x0(4:6)*constants.trueV2normV;
-P0(1:3,1:3)=P0(1:3,1:3)*constants.trueX2normX^2;
-P0(4:6,4:6)=P0(4:6,4:6)*constants.trueV2normV^2;
+OE = cart2orbelem(x0,1);
+% xk is at tk [a,e,i,om,Om,M]
+x0 = [OE.a,OE.e,OE.i,OE.om,OE.Om,OE.M];
+
+P0=diag([(1.5e-4)^2,0.1^2,(1*pi/180)^2,(1*pi/180)^2,(1*pi/180)^2,(1*pi/180)^2]);
 
 Xtruth = zeros(time.Ntsteps,model.fn);
 Xtruth(1,:)=x0;
@@ -86,6 +81,11 @@ Xplot(1,:)=x0;
 for k=2:length(time.TvecPlots)
     Xplot(k,:)=model.f(time.dtplot,time.TvecPlots(k-1),Xplot(k-1,:));
 end
+Xplotcart = zeros(time.Ntsteps,model.fn);
+for k=1:length(time.TvecPlots)
+    [r,v] = elm2rv(Xplot(k,1),Xplot(k,2),Xplot(k,3),Xplot(k,5),Xplot(k,4),Xplot(k,6),0,1);
+    Xplotcart(k,:) =  [r',v'];
+end
 
 figure
 plot(Xtruth(:,1),Xtruth(:,2),'ro')
@@ -94,17 +94,25 @@ plot(Xplot(:,1),Xplot(:,2),'b')
 axis equal
 axis square
 
+figure
+plot(Xplotcart(:,1),Xplotcart(:,2))
+title('orb in cart sapce')
+axis equal
+axis square
+
+
 % plotting the propagatin of MC
 Nmc=2000;
 XMC=zeros(Nmc,model.fn,time.Ntsteps);
 XMC(:,:,1)=mvnrnd(x0',P0,Nmc);
+
 for i=1:Nmc
     i
     for k=2:time.Ntsteps
         XMC(i,:,k)=model.f(time.dt,time.Tvec(k-1),XMC(i,:,k-1));
     end
 end
-pMC = mvnpdf(XMC(:,:,1),x0',P0);
+pMC = mvnpdf(XMC(:,:,1),x0,P0);
 
 %%
 close all
@@ -149,8 +157,8 @@ Npf = 5000; %paricle filter points
 
 % generate points on contours for characterisitc solutions
 
-model.pointGenerator = @(mx,Px)GH_points(mx,Px,7);
-[X,w] = model.pointGenerator(zeros(model.fn,1),0.2^2*eye(model.fn));
+model.pointGenerator = @(mx,Px)GH_points(mx,Px,5);
+[X,w] = model.pointGenerator(zeros(model.fn,1),0.6^2*eye(model.fn));
 % [X1,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),5);
 % % [X2,w] = GH_points(zeros(model.fn,1),2^2*eye(model.fn),4);
 % X2 = 6*sphere6Dm(6); %3906
@@ -191,7 +199,7 @@ wquad=wquad_initial;
 xfquad = xf0;
 Pfquad = P0;
 
-meas_freq_steps = 10000;
+meas_freq_steps = 1;
 
 histXprior=cell(time.Ntsteps,5);
 histXpost=cell(time.Ntsteps,5);
@@ -203,14 +211,14 @@ histXpost{1,1} = X;
 histXpost{1,2} = probs;
 teststeps = [33];
 
-plotfolder='SAT6Dsim1_prop';
+plotfolder='SAT6Dsim1orb_meas';
 mkdir(plotfolder)
 
 savePriorProps.plotfolder=plotfolder;
-savePriorProps.saveit=0;
+savePriorProps.saveit=1;
 
 savePostProps.plotfolder=plotfolder;
-savePostProps.saveit=0;
+savePostProps.saveit=1;
 
 EstMOCfilter_mu =   zeros(time.Ntsteps,model.fn);
 EstMOCfilter_P =    zeros(time.Ntsteps,model.fn^2);
@@ -234,7 +242,7 @@ for k=2:time.Ntsteps
     for ii=1:size(XMC,1)
         Xmctest(ii,:) = XMC(ii,:,k);
     end
-%     Xmctest=[];
+    Xmctest=[];
     disp([' k = ',num2str(k)])
     
     [X,probs]=propagate_character(X,probs,time.dt,time.Tvec(k),model);
@@ -250,7 +258,7 @@ for k=2:time.Ntsteps
 
     
 %         if any(k==teststeps)
-    
+%     keyboard
     fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
 %     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
     
@@ -281,8 +289,8 @@ for k=2:time.Ntsteps
             [X,probs,fullnormpdf]=MeasUpdt_character_modf(X,probs,4,k,zk,Xtruth(k,:),model,Xmctest,11);
 %             [X,probs,fullnormpdf]=MeasUpdt_character_modf(fullnormpdf,X,probs,4,k,zk,Xtruth,model,Xmctest);
             [xfquad,Pfquad]=QuadMeasUpdt(xfquad,Pfquad,zk,time.dt,time.Tvec(k),model,'ut');
-            
-%             plotpdfs_post_2D(k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePostProps)
+           
+            plotpdfs_post_6D([1,2],k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePostProps)
     
             
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -297,7 +305,7 @@ for k=2:time.Ntsteps
         end
     end
 
-    keyboard
+%     keyboard
 
 %     pause(1)
     
@@ -311,6 +319,33 @@ for k=2:time.Ntsteps
     EstQuadfilter_mu(1,:) = mestquad;
     EstQuadfilter_P(1,:) = reshape(PestXquad,1,model.fn^2);
 
+end
+
+%% Plots of errors
+errMOC = (EstMOCfilter_mu-Xtruth);
+errQuad = (EstQuadfilter_mu-Xtruth);
+
+stdMOC = zeros(time.Ntsteps,model.fn);
+stdQuad = zeros(time.Ntsteps,model.fn);
+for i=1:time.Ntsteps
+    P=reshape(EstMOCfilter_P(i,:),model.fn,model.fn);
+    Psqrt = sqrtm(P);
+    stdMOC(i,:) = diag(Psqrt);
+    
+    P=reshape(EstQuadfilter_P(i,:),model.fn,model.fn);
+    Psqrt = sqrtm(P);
+    stdQuad(i,:) = diag(Psqrt);
+    
+end
+
+for p=1:model.fn
+    figure(50+p)
+    plot(time.Tvec,errMOC(:,p),'r',time.Tvec,errMOC(:,p)+3*stdMOC(:,p),'k--',time.Tvec,errMOC(:,p)-3*stdMOC(:,p),'k--')
+end
+
+for p=1:model.fn
+    figure(60+p)
+    plot(time.Tvec,errQuad(:,p),'r',time.Tvec,errQuad(:,p)+3*stdQuad(:,p),'k--',time.Tvec,errQuad(:,p)-3*stdQuad(:,p),'k--')
 end
 
 % save('sim1.mat')

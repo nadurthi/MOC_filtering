@@ -203,7 +203,7 @@ histXpost{1,1} = X;
 histXpost{1,2} = probs;
 teststeps = [33];
 
-plotfolder='SAT6Dsim1_meas';
+plotfolder='SAT6Dsim1_meas_knnSurf';
 mkdir(plotfolder)
 
 savePriorProps.plotfolder=plotfolder;
@@ -251,9 +251,9 @@ for k=2:time.Ntsteps
     
 %         if any(k==teststeps)
 %     keyboard
-    fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
+%     fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,3,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
 %     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
-    
+    fullnormpdf = get_interp_pdf_0I_localInterp(X,probs,mX,PX,3,3,k,Xmctest,Xtruth(k,:));
     
     plotpdfs_prior_6D([1,2],k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePriorProps)
     
@@ -278,7 +278,7 @@ for k=2:time.Ntsteps
             zk
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
-            [X,probs,fullnormpdf]=MeasUpdt_character_modf(X,probs,4,k,zk,Xtruth(k,:),model,Xmctest,11);
+            [X,probs,fullnormpdf]=MeasUpdt_character_modf(X,probs,3,k,zk,Xtruth(k,:),model,Xmctest,11);
 %             [X,probs,fullnormpdf]=MeasUpdt_character_modf(fullnormpdf,X,probs,4,k,zk,Xtruth,model,Xmctest);
             [xfquad,Pfquad]=QuadMeasUpdt(xfquad,Pfquad,zk,time.dt,time.Tvec(k),model,'ut');
            
