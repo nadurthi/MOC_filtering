@@ -87,6 +87,11 @@ classdef DataSet < handle
         function transForms = GetTrasnformers(obj)
             [Atranf2norm,mtransf2norm]=obj.GetAffineTransform_Original2Final();
             [Atranf2true,mtransf2true]=obj.GetAffineTransform_Final2Original();
+            transForms.A_true2norm = Atranf2norm;
+            transForms.m_true2norm = mtransf2norm;
+            transForms.A_norm2true = Atranf2true;
+            transForms.m_norm2true = mtransf2true;
+            
             transForms.trueX2normX = @(x)affineTransform(x,Atranf2norm,mtransf2norm);
             transForms.normX2trueX = @(xn)affineTransform(xn,Atranf2true,mtransf2true);
             transForms.normprob2trueprob = @(p)p/det(Atranf2true);

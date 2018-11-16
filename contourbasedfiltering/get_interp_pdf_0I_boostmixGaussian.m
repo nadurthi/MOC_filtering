@@ -75,7 +75,7 @@ Xineq=[];
 % Xbnd2=5*gen_uniform_grid(5,dim);
 Xineq = [Xbnd1];
 
-GMMfitter.SetGMM_Hull();
+GMMfitter.SetGMM_Hull(3);
 indbnd = GMMfitter.IsInsideHull(Xineq,2);
 Xineq = Xineq(~indbnd,:);
 
@@ -104,8 +104,8 @@ XtestingMC = mvurnd(LB,UB,20000);
 while 1
     
     ExpPolyfitter = PolyFit(dsX.X,dsX.p);
-%     mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_Aineq(Pf,Xineq,XtestingMC);
-    mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_AdaptiveC(Pf,XtestingMC);
+    mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_Aineq(Pf,Xineq,XtestingMC);
+%     mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_AdaptiveC(Pf,XtestingMC);
     
     SS = mvurnd(LB,UB,10000);
     pSS = evaluate_PolyforLargetSetX(mxentpoly_norm,SS);

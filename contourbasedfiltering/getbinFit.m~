@@ -1,3 +1,0 @@
-function BinFit = getbinFit(X,probs,LB,UB,Nbin)
-
-Xbnd2=gen_uniform_grid(N,dim);

@@ -43,11 +43,11 @@ parfor i=1:size(Xx,1)
     for j=1:size(Xx,2)
         Xpoint(states2keep) = [Xx(i,j),Xy(i,j)];
         Xpoint(states2remove) = mX(states2remove);
-        pdfprobs_norm(j) = pdfnorm.func(Xpoint);
-        QuadFilprobs_norm(j) = mvnpdf(Xpoint,mquadfnorm',Pquadfnorm);
+%         pdfprobs_norm(j) = pdfnorm.func(Xpoint);
+%         QuadFilprobs_norm(j) = mvnpdf(Xpoint,mquadfnorm',Pquadfnorm);
         
-%         pdfprobs_norm(j) = marginalize_exp_pdf_modf([Xx(i,j),Xy(i,j)],states2remove,pdfnorm,X,probs,mX,PX,GMM,'GMM_MC');
-%         QuadFilprobs_norm(j) = mvnpdf([Xx(i,j),Xy(i,j)],mquadfnorm',Pquadfnorm);
+        pdfprobs_norm(j) = marginalize_exp_pdf_modf([Xx(i,j),Xy(i,j)],states2remove,pdfnorm,X,probs,mX,PX,GMM,'GMM_MC');
+        QuadFilprobs_norm(j) = mvnpdf([Xx(i,j),Xy(i,j)],mquadfnorm(states)',Pquadfnorm(states,states));
     end
     pdfprobs_norm_cell{i}=pdfprobs_norm;
     QuadFilprobs_norm_cell{i}=QuadFilprobs_norm;

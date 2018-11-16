@@ -31,19 +31,20 @@ if dot(V,X)<=0
     f=2*pi-f;
 end
 
-% sig = X'*V/sqrt(MU);
+sig = X'*V/sqrt(MU);
 % keyboard
-% E = atan2(sig/sqrt(a),1-rm/a);
+E = atan2(sig/sqrt(a),1-rm/a);
 
-% M = E-e*sin(E);
+M = E-e*sin(E);
 
 OE.a=a;
-OE.f=f;
 OE.e=e;
-OE.w=w;
+OE.om=w;
 OE.i=i;
 OE.Om=Om;
-
+OE.f=f;
+OE.M=M;
+OE.E=E;
 
 % OE=[a,e,E,M,w,i,Om];
 

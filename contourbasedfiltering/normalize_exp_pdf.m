@@ -22,7 +22,6 @@ end
 if strcmp(method,'GMM_MC')
     if isempty(GMM)
         GMMfitter = GMMFitDataSet(X,probs);
-        % GMM = GMMfitter.FitGMM_kmean_equalwt(5);
         GMM = GMMfitter.FitGMM_kmeans_optimwt(3);
     end
     C=[];
@@ -30,7 +29,7 @@ if strcmp(method,'GMM_MC')
     for i=1:20
         Nmc = 1000*i;
         Xmc1 = random(MyGmm2MatlabGMM(GMM),Nmc);
-        c = mean((pdf.func(Xmc1))./GaussSumMix(Xmc1,GMM));
+        c = mean((pdf.func(Xmc1))./evalGMM(Xmc1,GMM));
         C = [C,c];
         sdC = std(C);
         if abs(sdC - prvstd)/prvstd < 0.2
