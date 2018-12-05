@@ -1,6 +1,7 @@
-function h=radmodel_2D(x)
+function h=radmodel_2D(xnorm,constants)
+xnorm=xnorm(:);
 
-
+x = [xnorm(1:2)*constants.normX2trueX;xnorm(3:4)*constants.normV2trueV];
 x=x(1:2);
 x=x(:);
 % [xenu,~,~]=vec_radar_coordchange(x,PolarPosition,'ecef2local');
@@ -11,7 +12,7 @@ xenu=x;
 
 % xenu(:)';
 r=norm(xenu);
-th=atan2(xenu(1),xenu(2));
+th=atan2(xenu(2),xenu(1));
 % phi=atan2(sqrt(xenu(1)^2+xenu(2)^2),xenu(3));
 
 

@@ -1,6 +1,9 @@
 close all
-ff = 'duffsim_linearmeas/prior';
-mkdir('duffsim_linearmeas/traj+prior_contour')
+clear
+ff = 'simulations/duffsim_prop_nonormalization_verygood';
+load([ff,'/sim1.mat'])
+mkdir([ff,'/traj+prior_contour'])
+mkdir([ff,'/traj+prior_surf'])
 % figure(1)
 % plot(Xtruplot(:,1),Xtruplot(:,2),'k--')
 % hold on
@@ -10,23 +13,50 @@ for k=2:51
         Xmctest(ii,:) = XMC(ii,:,k);
     end
     
-    truesurffig= [ff,'/TrueContour_prior_',num2str(k),'.fig'];
+    truesurffig= [ff,'/prior/TrueContour_prior_',num2str(k),'.fig'];
     openfig(truesurffig)
+    h = gcf;
+    axesObjs = get(h, 'Children');
+    dataObjsprior = get(axesObjs, 'Children');
+    
+    hold on
+    plot(Xtruplot(:,1),Xtruplot(:,2),'k--')
+    axis([-10,10,-40,40])
+    title(['k = ',num2str(k)])
+    plot_prop_paper
+    
+    pause(2)
+    
+%     truesurffig= [ff,'/prior/TrueSurf_prior_',num2str(k),'.fig'];
+%     openfig(truesurffig)
+%     h = gcf;
+%     axesObjs = get(h, 'Children');
+%     dataObjsprior = get(axesObjs, 'Children');
+    
+    pause(2)
+    PPP = dataObjsprior{10}(2);
+    
+    figure(33)
+    surf(PPP.XData,PPP.YData,PPP.ZData,'FaceColor','b','EdgeColor','none','FaceAlpha',0.7)
+    camlight right; lighting phong
+    alpha 0.7
+    box off
+    grid on
+    
     hold on
     plot(Xtruplot(:,1),Xtruplot(:,2),'k--')
 %     plot(Xmctest(:,1),Xmctest(:,2),'ro')
     axis([-10,10,-40,40])
     title(['k = ',num2str(k)])
     plot_prop_paper
+    view([-16,44])
+    
     pause(1)
-%     saveas(gcf,['duffsim_linearmeas/traj+prior_contour','/TrueContourTrajNOMC_',num2str(k)],'png')
-%     saveas(gcf,['duffsim_linearmeas/traj+prior_contour','/TrueContourTrajNOMC_',num2str(k)],'fig')
-%     f1 = openfig(filename1);
-%     ax = gca;
-%     x1 = ax.XData;
-%     y1 = ax.YData;
-%     figure(1)
-%     plot(x1, y1, 'b-', 'LineWidth', 2);
-
+    figure(33)
+    saveas(gcf,[ff,'/traj+prior_surf','/TrueSurfTrajNOMC_',num2str(k)],'png')
+    saveas(gcf,[ff,'/traj+prior_surf','/TrueSurfTrajNOMC_',num2str(k)],'fig')
+    
+    pause(1)
+    close all
 end
 

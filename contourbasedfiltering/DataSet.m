@@ -10,6 +10,7 @@ classdef DataSet < handle
         affinetransforms={};
         cntrans=0;
         originalState='TrueState';
+        sortind;
     end
     methods
         % constructor. save a copy constants
@@ -167,6 +168,7 @@ classdef DataSet < handle
         % Some helpful functions
         function obj = SortByProb(obj,dir)
             [~,ind]=sort(obj.p(:),1,dir);
+            obj.sortind=ind;
             obj.p=obj.p(ind);
             obj.X=obj.X(ind,:);
             

@@ -14,7 +14,7 @@ digits(50)
 
 time.t0=0;
 time.tf=10;
-time.dt=1;
+time.dt=0.5;
 
 time.Tvec=time.t0:time.dt:time.tf;
 time.Ntsteps=length(time.Tvec);
@@ -23,26 +23,28 @@ time.Ntsteps=length(time.Tvec);
 
 model.f=@(dt,tk,xk)duff_prop_model(dt,xk);
 model.fn=2;
-model.Q = diag([(1e-4)^2,(1e-4)^2]);
-model.fstates = {'x','y','z','vx','vy','vz'};
+model.Q = diag([(1e-6)^2,(1e-6)^2]);
+model.fstates = {'x1','x2','v1','v2'};
 
 % model.h=@(x)[sqrt(x(1)^2+x(2)^2)];
 model.h=@(x)duff_meas_model(x);
 model.hn=1;
+model.hvec=@(x)sensmodel2vec(x,model.h,model.hn);
+
 % model.hstates = {'x','y'};
-model.hstates = {'r','th'};
-% model.hstates = {'th'};
+% model.hstates = {'r','th'};
+model.hstates = {'th'};
 % model.R=diag([(0.1/constants.Re)^2,(0.5*pi/180)^2]);
 % model.R=diag([0.1^2,0.1^2]);
-% model.R=diag([2^2,(5*pi/180)^2]);
-model.R=diag([(1*pi/180)^2]);
+% model.R=diag([1^2,(2*pi/180)^2]);
+model.R=diag([(10*pi/180)^2]);
 % model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 
 %% generate truth
 
 x0=[5,5]';
-P0=0.1^2*eye(2);
+P0=0.5^2*eye(2);
 
 Xtruth = zeros(time.Ntsteps,model.fn);
 Xtruth(1,:)=x0;
@@ -110,16 +112,16 @@ Pfquad = P0;
 
 Npf = 5000; %paricle filter points
 
-GMMinitial=getInitialGMM(xf0(:),0.9^2*Pf0,7);
+GMMinitial=getInitialGMM(xf0(:),0.7^2*Pf0,7);
 model.gmmmethod='ut';
 
 % generate points on contours for characterisitc solutions
 
-model.pointGenerator = @(mx,Px)GH_points(mx,Px,15);
+model.pointGenerator = @(mx,Px)GH_points(mx,Px,11);
 
 
 % model.pointGenerator = @(mx,Px)mvnrnd(mx,Px,200);
-model.pointscalefactor = 0.5;
+model.pointscalefactor = 0.4;
 [X,w] = model.pointGenerator(zeros(model.fn,1),model.pointscalefactor^2*eye(model.fn));
 % [X,w] = mvnrnd(zeros(model.fn,1),1^2*eye(model.fn),100);
 
@@ -172,7 +174,7 @@ histXpost{1,1} = X;
 histXpost{1,2} = probs;
 teststeps = [33];
 
-plotfolder='duffsim_linearmeas';
+plotfolder='simulations/duffsim_thmeas_test';
 mkdir(plotfolder)
 
 savePriorProps.plotfolder=[plotfolder,'/prior'];
@@ -215,14 +217,12 @@ for k=2:time.Ntsteps
     GMM=prior_prop_GMM(GMM,time.dt,time.Tvec(k),model);
     
 
-    [mX,PX]=MeanCov(X,probs/sum(probs));
+    
     
 
     disp(['cond = ',num2str(cond(PX))])
 
-    
-%         if any(k==teststeps)
-    
+    [mX,PX]=MeanCov(X,probs/sum(probs));
     fullnormpdf=get_interp_pdf_0I_duff(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
 %     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
     priorpdfnorm=fullnormpdf;
@@ -231,12 +231,17 @@ for k=2:time.Ntsteps
     
     %     keyboard
     
-    figure(12)
-    hold on
-    [mG,PG]=GMMcell2array(GMM);
-    plot(mG(:,1),mG(:,2),'b*','MarkerSize',10)
-    hold off
-
+%     figure(12)
+%     hold on
+%     [mG,PG]=GMMcell2array(GMM);
+%     plot(mG(:,1),mG(:,2),'b*','MarkerSize',10)
+%     hold off
+    
+%     X=histXprior{k,1};
+%     probs=histXprior{k,2};
+%     fullnormpdf=histXprior{k,3};
+    
+    
     histXprior{k,1}=X;
     histXprior{k,2}=probs;
     histXprior{k,3}=fullnormpdf;
@@ -275,7 +280,7 @@ for k=2:time.Ntsteps
 
             histXpost{k,4}=xfquad;
             histXpost{k,5}=Pfquad;
-    
+            histXpost{k,6}=zk;
             
         end
     end

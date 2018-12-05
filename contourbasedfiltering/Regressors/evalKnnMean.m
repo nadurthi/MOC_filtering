@@ -13,11 +13,12 @@ function f = evalKnnMean(X,p,Xineq,Xtest)
     end
     B=[beq;bineq];
     
-    Nn=3;
-    
+    Nn=dim+1;
+%     disp(['in evalknnmean'])
     f=zeros(Ntest,1);
     Xtrain  = [X;Xineq];
     idx = knnsearch(Xtrain,Xtest,'K',Nn);
+%     Xtrain(idx)
 %     keyboard
     for i=1:Ntest
         dists = sqrt(sum((Xtrain(idx(i,:),:)-repmat(Xtest(i,:),Nn,1)).^2,2));

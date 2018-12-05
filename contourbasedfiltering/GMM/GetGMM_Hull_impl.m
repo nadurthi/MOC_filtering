@@ -1,5 +1,12 @@
-function GMMhull = GetGMM_Hull_impl(X,NgcompMax,method)
+function GMMhull = GetGMM_Hull_impl(X,NgcompMax,method,mineigvalsetsqr)
 [N,dim] = size(X);
+switch nargin
+    case 4
+        mineigvalsqr=mineigvalsetsqr;
+    otherwise
+        mineigvalsqr=0.1;
+end
+
 
 % idx = GenerateClusterIndexes(X,NgcompMax,method);
 idx = GenerateClusterIndexes_merging(X,NgcompMax,method);
@@ -10,7 +17,7 @@ PF =cell(Ngcomp,1);
 AF=cell(Ngcomp,1);
 BF=cell(Ngcomp,1);
 
-parfor i=1:Ngcomp
+for i=1:Ngcomp
     xx=X(idx==i,:) ;
     Nc = size(xx,1);
     ww = ones(Nc,1)/Nc;
@@ -40,7 +47,7 @@ parfor i=1:Ngcomp
     PF{i} = inv(A*A);
         [u,s]=eig( PF{i} );
     sd = diag(s);
-    sd(sd<0.1)=0.1;
+    sd(sd<mineigvalsqr)=mineigvalsqr;
     s=diag(sd);
     PF{i} = u*s*u';
     A =sqrtm(inv(PF{i}));
@@ -56,6 +63,11 @@ GMMhull.Ngcomp = Ngcomp;
 GMMhull.A = AF;
 GMMhull.b = BF;
 GMMhull.idx=idx;
+GMMhull.mineigvalsqr=mineigvalsqr;
+
+% GMMhull=mergeGMMhulls(GMMhull,X);
+GMMhull=addmoreGMMhulls(GMMhull,X);
+
 end
 
 

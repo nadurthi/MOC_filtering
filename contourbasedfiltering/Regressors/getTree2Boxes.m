@@ -1,7 +1,22 @@
-function boxes=getTree2Boxes(tree)
+function boxes=getTree2Boxes(tree,LB,UB)
 states=tree.PredictorNames;
 dim = length(states);
-boxes={-1.5*ones(1,dim),1.5*ones(1,dim),1,0};
+
+switch nargin
+    case 3
+    
+    case 2
+        error('Not enough arguments')
+    case 1
+        LB=-1.5*ones(1,dim);
+        UB=1.5*ones(1,dim);
+    otherwise
+        LB=-1.5*ones(1,dim);
+        UB=1.5*ones(1,dim);
+end
+    
+
+boxes={LB,UB,1,0};
 
 
 for nc = 1:length(tree.CutPredictor)

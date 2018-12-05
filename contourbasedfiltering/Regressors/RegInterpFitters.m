@@ -10,9 +10,11 @@ classdef RegInterpFitters < handle
         mxentpoly;
         active_method;
         possible_methods={'PolyFit',... % do a global polynomial fit tna then take exp
+            'PolyFitLeastSquares', ... % do a least squares fit with l2-norm regularization (analytical)
             'DecisionTree',... % do decision tree/CART regression
             'DecisionTreeAdaptiveOutRegion',... % do decision tree/CART regression, use GMMHull to add points and adapt the trees
             'KnnMean',... % just take mean of k-nearest neigbors
+            'KnnMeanKdTree',... % build the kdtree and save it
             'KnnPolyFit',... % get nearest neigbors and do smooth poly regression
             'KnnLeastDeg',... % do k-nn and then least degree interpolation
             'CARTgmm'... % do a cart and then apply gmm to each bin
@@ -31,6 +33,10 @@ classdef RegInterpFitters < handle
             if strcmp(obj.active_method, 'PolyFit' )
                 obj.method_params.mxentpoly = fitExpPoly_A_Atop_Aineq(X,p,Pf,Xineq,XtestoutsideHull);
             end
+            if strcmp(obj.active_method, 'PolyFitLeastSquares' )
+                obj.method_params.mxentpoly = fitExpPoly_A_leastsquares(X,p,Pf,Xineq,XtestoutsideHull);
+            end
+
             if strcmp(obj.active_method, 'DecisionTree' )
                 obj.method_params.tree = fitTree(X,p,Pf,Xineq,XtestoutsideHull);
             end
@@ -49,6 +55,12 @@ classdef RegInterpFitters < handle
                 obj.method_params.Xineq = Xineq;
                 obj.method_params.p = p;
             end
+             if strcmp(obj.active_method, 'KnnMeanKdTree' )
+                [Mdl,Ytrain] = fitkdtree(X,p,Xineq);
+                obj.method_params.Mdl = Mdl;
+                obj.method_params.Ytrain = Ytrain;
+             end
+            
             if strcmp(obj.active_method, 'KnnLeastDeg' )
                 obj.method_params.X = X;
                 obj.method_params.Xineq = Xineq;
@@ -69,6 +81,11 @@ classdef RegInterpFitters < handle
                 flog = evaluate_PolyforLargetSetX(obj.method_params.mxentpoly,Xtest);
                 f = exp(flog);
             end
+             if strcmp(obj.active_method, 'PolyFitLeastSquares' )
+                %                 flog = evaluate_polyND(obj.method_params.mxentpoly,Xtest);
+                flog = evaluate_PolyforLargetSetX(obj.method_params.mxentpoly,Xtest);
+                f = exp(flog);
+            end
             if strcmp(obj.active_method, 'DecisionTree' )
                 flog = predict(obj.method_params.tree,Xtest);
                 f = exp(flog);
@@ -81,6 +98,10 @@ classdef RegInterpFitters < handle
                 flog = evalKnnMean(obj.method_params.X,obj.method_params.p,obj.method_params.Xineq,Xtest);
                 f = exp(flog);
             end
+            if strcmp(obj.active_method, 'KnnMeanKdTree' )
+                flog = evalKnnMean_bykdtree(obj.method_params.Mdl,obj.method_params.Ytrain,Xtest);
+                f = exp(flog);
+            end    
             if strcmp(obj.active_method, 'KnnLeastDeg' )
                 flog = evalKnnLeatPoly(obj.method_params.X,obj.method_params.p,obj.method_params.Xineq,Xtest);
                 f = exp(flog);

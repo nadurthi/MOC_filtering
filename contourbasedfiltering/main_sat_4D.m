@@ -39,7 +39,7 @@ constants.normT2trueT=(constants.TU);
 
 time.t0=0 *constants.trueT2normT;
 time.tf=48*60*60 *constants.trueT2normT;
-time.dt=5*60*60 *constants.trueT2normT;
+time.dt=12*60*60 *constants.trueT2normT;
 time.dtplot=0.1*60*60 *constants.trueT2normT;
 
 time.Tvec=time.t0:time.dt:time.tf;
@@ -54,23 +54,28 @@ model.fn=4;
 model.Q = diag([0.00001^2,0.00001^2,0.0000001^2,0.0000001^2]);
 model.Q(1:2,1:2)=model.Q(1:2,1:2)*constants.trueX2normX^2;
 model.Q(3:4,3:4)=model.Q(3:4,3:4)*constants.trueV2normV^2;
+model.fstates = {'x','y','vx','vy'};
 
-model.h=@(x)radmodel_2D(x);
+
+model.h=@(xnorm)radmodel_2D(xnorm,constants);
 model.hn=1;
-model.R=diag([(0.5*pi/180)^2]);
+model.hvec=@(x)sensmodel2vec(x,model.h,model.hn);
+% model.R=diag([(2*pi/180)^2]);
+model.R=diag([(0.1*pi/180)^2]);
+model.hstates = {'azi'};
 % model.R=diag([(0.1/constants.Re)^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
 
 
+
 %% generate truth
-r0=[10000,10];
-v0=[-0.1,8];
-x0=[r0,v0]';
-OE = cart2orbelem([r0,0,v0,0],constants.mu);
+
+x0=[10000,10,-0.1,7.6]';
+OE = cart2orbelem(sat4D26D(x0),constants.mu)
 % [ r, v, Ehat ] = FnG(0, time.dt, x0(1:3), x0(4:6), 1);
 % [ r1, v1, Ehat ] = FnG(0, time.dt, r, -v, 1);
 
-P0=diag([1^2,1^2,0.0001^2,0.0001^2]);
+P0=diag([1^2,1^2,0.001^2,0.001^2]);
 
 x0(1:2)=x0(1:2)*constants.trueX2normX;
 x0(3:4)=x0(3:4)*constants.trueV2normV;
@@ -96,7 +101,7 @@ axis equal
 axis square
 
 % plotting the propagatin of MC
-Nmc=2000;
+Nmc=5000;
 XMC=zeros(Nmc,model.fn,time.Ntsteps);
 XMC(:,:,1)=mvnrnd(x0',P0,Nmc);
 for i=1:Nmc
@@ -138,8 +143,8 @@ if false
     end
 end
 %% comparing with UKF and particle filter
-% xf0=mvnrnd(x0(:)',P0);
-xf0 = x0;
+xf0=mvnrnd(x0(:)',P0);
+% xf0 = x0;
 Pf0 = P0;
 
 xfquad = xf0;
@@ -148,10 +153,17 @@ Pfquad = P0;
 Npf = 5000; %paricle filter points
 
 
+GMMinitial=getInitialGMM(xf0(:),0.9^2*Pf0,7);
+model.gmmmethod='ut';
+
 % generate points on contours for characterisitc solutions
 
-model.pointGenerator = @(mx,Px)GH_points(mx,Px,5);
-[X,w] = model.pointGenerator(zeros(model.fn,1),0.5^2*eye(model.fn));
+model.pointGenerator = @(mx,Px)GH_points(mx,Px,9);
+% model.pointGenerator = @(mx,Px)mvnrnd(mx(:)',Px,20000);
+
+model.pointscalefactor = 0.4;
+[X,w] = model.pointGenerator(zeros(model.fn,1),model.pointscalefactor^2*eye(model.fn));
+
 % [X1,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),5);
 % % [X2,w] = GH_points(zeros(model.fn,1),2^2*eye(model.fn),4);
 % X2 = 6*sphere6Dm(6); %3906
@@ -192,6 +204,9 @@ wquad=wquad_initial;
 xfquad = xf0;
 Pfquad = P0;
 
+GMM = GMMinitial;
+
+
 meas_freq_steps = 1;
 
 histXprior=cell(time.Ntsteps,5);
@@ -204,13 +219,15 @@ histXpost{1,1} = X;
 histXpost{1,2} = probs;
 teststeps = [33];
 
-plotfolder='SAT4Dsim1_meas_r';
+plotfolder='simulations/SAT4Dsim1_props';
 mkdir(plotfolder)
 
-savePriorProps.plotfolder=plotfolder;
+savePriorProps.plotfolder=[plotfolder,'/prior'];
+mkdir(savePriorProps.plotfolder)
 savePriorProps.saveit=1;
 
-savePostProps.plotfolder=plotfolder;
+savePostProps.plotfolder=[plotfolder,'/post'];
+mkdir(savePostProps.plotfolder)
 savePostProps.saveit=1;
 
 EstMOCfilter_mu =   zeros(time.Ntsteps,model.fn);
@@ -242,6 +259,7 @@ for k=2:time.Ntsteps
     [Xquad,wquad]=propagate_character(Xquad,wquad,time.dt,time.Tvec(k),model);
     [xfquad,Pfquad]=QuadProp(xfquad,Pfquad,time.dt,time.Tvec(k),model,'ut');
 
+%     GMM=prior_prop_GMM(GMM,time.dt,time.Tvec(k),model);
     
     
     [mX,PX]=MeanCov(X,probs/sum(probs));
@@ -251,12 +269,17 @@ for k=2:time.Ntsteps
 
     
 %         if any(k==teststeps)
-    
-    fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
+%     keyboard
+%     fullnormpdf=get_interp_pdf_0I_boostmixGaussian(X,probs,mX,PX,3,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
 %     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
+    fullnormpdf=get_interp_pdf_0I_4Dsat(X,probs,mX,PX,4,3,k,Xmctest,Xtruth(k,:)); %Xtruth(k,:)
+%     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
+    priorpdfnorm=fullnormpdf;
     
     
-    plotpdfs_prior_6D([1,2],k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePriorProps)
+    plotpdfs_prior_4D([1,2],k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),model,savePriorProps)
+    
+%     keyboard
     
     histXprior{k,1}=X;
     histXprior{k,2}=probs;
@@ -275,21 +298,20 @@ for k=2:time.Ntsteps
     if k>=2
         if rem(k,meas_freq_steps)==0
             disp("doing meas update")
-            disp("doing meas update")
-            disp("doing meas update")
-            disp("doing meas update")
-            disp("doing meas update")
-            disp("doing meas update")
-            disp("doing meas update")
             zk = model.h(Xtruth(k,:)')+sqrtm(model.R)*randn(model.hn,1);
             zk
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
-            [X,probs,fullnormpdf]=MeasUpdt_character_modf(X,probs,4,k,zk,Xtruth(k,:),model,Xmctest,11);
+%             [X,probs,fullnormpdf] =       MeasUpdt_character_modf(X,probs,3,k,zk,Xtruth(k,:),model,Xmctest,11);
+            [X,probs,fullnormpdf] = MeasUpdt_character_modf_4Dsat(X,probs,priorpdfnorm,4,k,zk,Xtruth(k,:),model,Xmctest,5);
+            
 %             [X,probs,fullnormpdf]=MeasUpdt_character_modf(fullnormpdf,X,probs,4,k,zk,Xtruth,model,Xmctest);
             [xfquad,Pfquad]=QuadMeasUpdt(xfquad,Pfquad,zk,time.dt,time.Tvec(k),model,'ut');
             
-            plotpdfs_post_6D([1,2],k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),savePostProps)
+            GMM=post_GMM(GMM,zk,time.dt,time.Tvec(k),model);
+            
+            
+            plotpdfs_post_4D([1,2],k,priorpdfnorm,fullnormpdf,model,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),zk,savePostProps)
     
             
             % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -310,14 +332,14 @@ for k=2:time.Ntsteps
     
     
     [mestX,PestX]=MeanCov(X,probs/sum(probs));
-    [mestquad,PestXquad]=MeanCov(xfquad,Pfquad);
-    
-    EstMOCfilter_mu(1,:) = mestX;
-    EstMOCfilter_P(1,:) = reshape(PestX,1,model.fn^2);
 
-    EstQuadfilter_mu(1,:) = mestquad;
-    EstQuadfilter_P(1,:) = reshape(PestXquad,1,model.fn^2);
+    
+    EstMOCfilter_mu(k,:) = mestX;
+    EstMOCfilter_P(k,:) = reshape(PestX,1,model.fn^2);
+
+    EstQuadfilter_mu(k,:) = xfquad;
+    EstQuadfilter_P(k,:) = reshape(Pfquad,1,model.fn^2);
 
 end
 
-% save('sim1.mat')
+save([plotfolder,'/sim1.mat'])

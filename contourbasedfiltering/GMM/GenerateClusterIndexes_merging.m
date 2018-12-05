@@ -1,5 +1,13 @@
-function idx = GenerateClusterIndexes_merging(X,NgcompMax,method)
+function idx = GenerateClusterIndexes_merging(X,NgcompMax,method,mineigvalset)
 [N,dim] = size(X);
+
+switch nargin
+    case 4
+        mineigval=mineigvalset;
+    otherwise
+        mineigval=1e-3;
+end
+
 
 Z = linkage(X,'complete');
 idx = cluster(Z,'Maxclust',NgcompMax);
@@ -9,7 +17,7 @@ while(1)
     cnt=cnt+1;
     cnt
     
-    [M,P,S]=getmetaCluster(idx,X,NgcompMax);
+    [M,P,S]=getmetaCluster(idx,X,NgcompMax,mineigval);
     
     B=S(S(:,1)~=-1,:); % take the bad ones
     if isempty(B)

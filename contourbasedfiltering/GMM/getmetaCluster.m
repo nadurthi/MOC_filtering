@@ -1,5 +1,15 @@
-function [M,P,S]=getmetaCluster(idx,X,NgcompMax)
+function [M,P,S]=getmetaCluster(idx,X,NgcompMax,mineigvalset)
 [N,dim] = size(X);
+
+switch nargin
+    case 4
+        mineigval=mineigvalset;
+    otherwise
+        mineigval=1e-3;
+end
+
+
+
 
 M=zeros(NgcompMax,dim+1);
 P=cell(NgcompMax,1);
@@ -14,7 +24,7 @@ for i=1:NgcompMax
     M(i,1:dim)=m;
     M(i,dim+1)=i;
     eigsP = eig(P{i});
-    if sqrt(min(eigsP)) <=1e-3 || ~isreal(eigsP) || any(isnan(eigsP)==1) || any(isfinite(eigsP)==0)
+    if sqrt(min(eigsP)) <=mineigval || ~isreal(eigsP) || any(isnan(eigsP)==1) || any(isfinite(eigsP)==0)
         disp('BREAK: min(eigsP) <=0 || isreal(eigsP) || any(isnan(eigsP)==1) || any(isfinite(eigsP)==0)')
         S(i,1)=i;
         S(i,2)=real(sqrt(min(eigsP) ));

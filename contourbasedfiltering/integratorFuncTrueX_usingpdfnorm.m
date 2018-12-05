@@ -10,7 +10,7 @@ dim=pdfnorm.dim;
 %estimate normalizing constant
 
 
-
+maxdiag = norm(pdfnorm.UB-pdfnorm.LB);
 % keyboard
 %% method 2 using mixture of gaussians
 
@@ -21,20 +21,61 @@ if strcmp(method,'RegTreeBoxIntegrator')
     if dim==2
         Nmc=100;
     end
+    if dim == 4
+        Nmc = 100;
+    end
     if dim==6
         Nmc=100;
     end
-    I=0;
+%     tic
+    XX=zeros(Nmc*size(boxes,1),dim);
+    VV=zeros(Nmc*size(boxes,1),1);
+    k=1;
     for j=1:1:size(boxes,1)
-       lb = boxes{j,1};
+        lb = boxes{j,1};
        ub = boxes{j,2};
+       boxdiag = norm(ub-lb);
        volbox = prod(ub-lb );
        
-       xnorm = mvurnd(lb,ub,Nmc);
-       w=ones(Nmc,1)/Nmc;
-       I=I+sum(w.*( Functrue(pdfnorm.transForms.normX2trueX(xnorm) ).*pdfnorm.func(xnorm) ))*volbox;
+       if boxdiag/maxdiag <= 0.25
+           NN=10;
+       elseif boxdiag/maxdiag > 0.25 && boxdiag/maxdiag <= 0.5
+           NN= 50;
+       else
+           NN=Nmc;
+       end
+       xnorm = mvurnd(lb,ub,NN);
+       VV(k:k+NN-1)=volbox/NN;
+       XX(k:k+NN-1,:)=xnorm;
+       k=k+NN;
     end
+    XX=XX(1:k-1,:);
+    VV=VV(1:k-1);
+    I = sum(VV.*( Functrue(pdfnorm.transForms.normX2trueX(XX) ).*pdfnorm.func(XX) ));
+%     toc
     
+%     keyboard
+    
+%     tic
+%     I=zeros(size(boxes,1),1);
+%     for j=1:1:size(boxes,1)
+% %         [j,size(boxes,1)]
+%        lb = boxes{j,1};
+%        ub = boxes{j,2};
+%        boxdiag = norm(ub-lb);
+%        volbox = prod(ub-lb );
+%        
+%        xnorm = mvurnd(lb,ub,Nmc);
+%        w=ones(Nmc,1)/Nmc;
+%         
+%         pdfnorm.func(xnorm);
+%         
+%        I(j)=sum(w.*( Functrue(pdfnorm.transForms.normX2trueX(xnorm) ).*pdfnorm.func(xnorm) ))*volbox;
+%         
+%        
+%     end
+%     I = sum(I);
+%     toc
     disp(['Integration constant is :',num2str(I)])
     return 
 end

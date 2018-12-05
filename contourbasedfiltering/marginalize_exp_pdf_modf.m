@@ -1,4 +1,4 @@
-function margval = marginalize_exp_pdf_modf(xeval,states2remove,pdf,X,probs,mquad,Pquad,GMM,method)
+function margval = marginalize_exp_pdf_modf(xeval,states2remove,pdfnorm,X,probs,mquad,Pquad,method)
 % xeval evaluate at this point
 % first remove the states2remove
 
@@ -15,7 +15,7 @@ if strcmp(method,'dummyMC2')
     m=mquad;
     Pcov=Pquad;
     
-    c=integrate_func_exppdf(@(x)1,pdf,m,Pcov,method);
+    c=integrate_func_exppdf(@(x)1,pdfnorm,m,Pcov,method);
     disp(['integration constant : ',num2str(c)])
     %     keyboard
 end
@@ -23,12 +23,8 @@ end
 %% method 2 using mixture of gaussians
 
 if strcmp(method,'GMM_MC')
-    if isempty(GMM)
-        GMMfitter = GMMFitDataSet(X,probs);
-        % GMM = GMMfitter.FitGMM_kmean_equalwt(5);
-        GMM = GMMfitter.FitGMM_kmeans_optimwt(3);
-    end
-    GMMmarg=GMM;
+   
+    GMMmarg=pdfnorm.GMMHull.GMMhull;
     for i=1:GMMmarg.Ngcomp
         GMMmarg.mx{i} = GMMmarg.mx{i}(states2remove);
         GMMmarg.Px{i} = GMMmarg.Px{i}(states2remove,states2remove);
@@ -36,14 +32,14 @@ if strcmp(method,'GMM_MC')
     
     C=[];
     prvstd=100;
-    for i=1:20
+    for i=[5]
         Nmc = 1000*i;
         Xmc1 = random(MyGmm2MatlabGMM(GMMmarg),Nmc);
         XXX = zeros(Nmc,dim);
         XXX(:,states2remove) = Xmc1;
         XXX(:,states2keep) = repmat(xeval(:)',Nmc,1);
         
-        c = mean((pdf.func(XXX))./GaussSumMix(Xmc1,GMMmarg));
+        c = mean((pdfnorm.func(XXX))./GaussSumMix(Xmc1,GMMmarg));
         C = [C,c];
         sdC = std(C);
         if abs(sdC - prvstd)/prvstd < 0.2

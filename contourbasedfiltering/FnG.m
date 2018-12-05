@@ -73,7 +73,8 @@ if e>1  % e> 0.8
     % option is disabled by taking e>1, (a case that does not occur here)
    
 
-
+    keyboard
+    
     options=optimoptions('fsolve','MaxIter',1e10,'TolFun',1e-15,'Display','off','SpecifyObjectiveGradient',true);
     [Ehat,err]=fsolve(@(Ehat)solve_kepler_Fjac(Ehat,M,R0,a,sigma0),M,options);
 

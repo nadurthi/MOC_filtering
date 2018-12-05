@@ -401,8 +401,8 @@ axis equal
 axis square
 hold off
 if saveprops.saveit==1
-    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueCont_',nametag,'_',num2str(Tk)],'png')
-    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueCont_',nametag,'_',num2str(Tk)],'fig')
+    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueSurf_',nametag,'_',num2str(Tk)],'png')
+    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueSurf_',nametag,'_',num2str(Tk)],'fig')
 end
 
 %% PLot pdfs both prior and post
@@ -430,8 +430,8 @@ hold off
 
 
 if saveprops.saveit==1
-    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueCont_',nametag,'_',num2str(Tk)],'png')
-    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueCont_',nametag,'_',num2str(Tk)],'fig')
+    saveas(gcf,[saveprops.plotfolder,'/BothTrueCont_',nametag,'_',num2str(Tk)],'png')
+    saveas(gcf,[saveprops.plotfolder,'/BothTrueCont_',nametag,'_',num2str(Tk)],'fig')
 end
 
 figure(52)
@@ -462,7 +462,7 @@ axis square
 hold off
 
 if saveprops.saveit==1
-    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueCont_',nametag,'_',num2str(Tk)],'png')
-    saveas(gcf,[saveprops.plotfolder,'/FullTrajTrueCont_',nametag,'_',num2str(Tk)],'fig')
+    saveas(gcf,[saveprops.plotfolder,'/BothTrueSurf_',nametag,'_',num2str(Tk)],'png')
+    saveas(gcf,[saveprops.plotfolder,'/BothTrueSurf_',nametag,'_',num2str(Tk)],'fig')
 end
 end

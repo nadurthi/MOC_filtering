@@ -17,7 +17,7 @@ end
 %     [mquadfnorm,Pquadfnorm]=MeanCov(x,w);
 % end
 
-[Xx,Xy]=meshgrid(linspace(-2,2,50),linspace(-2,2,50) );
+[Xx,Xy]=meshgrid(linspace(-1.8,1.8,50),linspace(-1.8,1.8,50) );
 pdfprobs_norm = zeros(size(Xx));
 QuadFilprobs_norm = zeros(size(Xx));
 GMMprobs_norm = zeros(size(Xx));

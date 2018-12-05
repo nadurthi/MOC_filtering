@@ -10,11 +10,10 @@ logprobs = log(probs);
 
 % Xn = pdfnorm.transForms.trueX2normX(X) ;
 % pn = pdfnorm.transForms.trueprob2normprob(probs) ;
-% keyboard
+% % keyboard
 
-% pz2 = integratorFuncTrueX_usingpdfnorm(pdfnormprior,@(x)mvnpdf(repmat(z(:)',size(x,1),1),model.h(x),model.R),'RegTreeBoxIntegrator');
-
-pz2=1;
+pz2 = integratorFuncTrueX_usingpdfnorm(pdfnormprior,@(x)mvnpdf(repmat(z(:)',size(x,1),1),model.hvec(x),model.R),'RegTreeBoxIntegrator');
+% pz2=1;
 logpz = log(pz2);
 
 logprobsXpost = zeros(size(probs));
@@ -26,8 +25,8 @@ probsXpost = exp(logprobsXpost);
 
 %% Re-Samplers
 
-
-[Xpost,postprobs] = SimpleGHpostSampler(X,probs,probsXpost,pdfnormprior,model,z,11,0.3);
+% keyboard
+[Xpost,postprobs] = SimpleGHpostSampler(X,probs,probsXpost,pdfnormprior,model,z,11,0.5);
 
 %%
 

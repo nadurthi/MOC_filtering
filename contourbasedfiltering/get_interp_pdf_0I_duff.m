@@ -88,15 +88,26 @@ Pf=Basis_polyND(dim,Nm);
 Xineq=[];
 [Xbnd1,~] = GLgn_pts(-1.5*ones(1,dim),1.5*ones(1,dim),9);
 
+Xbnd2=[];
+% [Xbnd2,~] = GLgn_pts(-2*ones(1,dim),2*ones(1,dim),9);
+
+
 XtestoutsideHull = mvurnd(-1.7*ones(dim,1),1.7*ones(dim,1),3000);
 
 % Xbnd2=2.5*gen_uniform_grid(3,dim);
 % Xbnd2=5*gen_uniform_grid(5,dim);
-Xineq = [Xbnd1];
+Xineq = [Xbnd1;Xbnd2];
 
-
+% keyboard
 GMMHull = GMMFitDataSet(dsX.X,dsX.p);
-GMMHull.SetGMM_Hull(25);
+GMMHull.SetGMM_Hull(10);
+% GMMHull.optimGMMhullwts();
+% GMMHull.GMM=GMMHull.GMMhull;
+
+
+% figure
+% GMMHull.plotGMMSurf([1,2],'g')
+
 indbnd = GMMHull.IsInsideHull(Xineq,1.5);
 Xineq = Xineq(~indbnd,:);
 
@@ -105,7 +116,7 @@ XtestoutsideHull = XtestoutsideHull(~indbnd,:);
 
 
 figure(36)
-GMMHull.plotGMMpointsHUll([1,2],Xineq,1.2,'ro')
+GMMHull.plotGMMpointsHUll([1,2],Xineq,1.0,'ro')
 hold on
 plot3(Xineq(:,1),Xineq(:,2),-ones(size(Xineq,1),1),'b+')
 hold off
@@ -172,7 +183,7 @@ UBtest=1.5*ones(dim,1);
 if isfield(RIF.method_params,'mxentpoly')
     pdfnorm.dim =dim;
     mxentpoly_norm = RIF.method_params.mxentpoly;
-    
+    pdfnorm.mxentpoly_norm = mxentpoly_norm;
     pdfnorm.func=@(x)exp(evaluate_polyND(mxentpoly_norm,x));
     pdfnorm.transForms = dsX.GetTrasnformers();
     
