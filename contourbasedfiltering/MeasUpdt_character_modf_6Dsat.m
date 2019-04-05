@@ -1,4 +1,4 @@
-function [Xpost_resample,probsXpost_resample,pdfXpostnorm]=MeasUpdt_character_modf_6Dsat(X,probs,pdfnormprior,Nm,Tk,z,Xtruth,model,Xmc,Npts)
+function [Xpost_resample,probsXpost_resample,pdfXpostnorm]=MeasUpdt_character_modf_6Dsat(X,probs,pdfnormprior,Nm,Tk,z,Xtruth,model,time,Xmc,Npts)
 % the filter is implemented always using discrete - discrete models
 [N,dim]=size(X);
 
@@ -14,8 +14,10 @@ logprobs = log(probs);
 
 % pz2 = integratorFuncTrueX_usingpdfnorm(pdfnormprior,@(x)mvnpdf(repmat(z(:)',size(x,1),1),model.h(x),model.R),'RegTreeBoxIntegrator');
 
-pz2=1;
+pz2 = integratorFuncTrueX_usingpdfnorm(pdfnormprior,@(x)mvnpdf(repmat(z(:)',size(x,1),1),model.hvec(x),model.R),'RegTreeBoxIntegrator');
 logpz = log(pz2);
+
+
 
 logprobsXpost = zeros(size(probs));
 for i=1:size(X,1)
@@ -24,10 +26,12 @@ end
 
 probsXpost = exp(logprobsXpost);
 
+
 %% Re-Samplers
 
 
-[Xpost,postprobs] = SimpleMCpostSampler(X,probs,probsXpost,pdfnormprior,model,z,11,1.5);
+% [Xpost,postprobs] = SimpleMCpostSampler(X,probs,probsXpost,pdfnormprior,model,z,11,1.5);
+[Xpost,postprobs] = SimpleGHpostSampler_6D(X,probs,probsXpost,pdfnormprior,model,z,11,0.5);
 
 %%
 
@@ -39,7 +43,9 @@ plot3(X(:,1),X(:,2),probs/sum(probs),'ro',X(:,1),X(:,2),probsXpost/sum(probsXpos
 
 
 [mX,PX] = MeanCov(Xpost,postprobs/sum(postprobs));
-pdfXpostnorm = get_interp_pdf_0I_6Dsat(Xpost,postprobs,mX,PX,Nm,3,Tk,Xmc,Xtruth);
+% pdfXpostnorm = get_interp_pdf_0I_6Dsat(Xpost,postprobs,mX,PX,Nm,3,Tk,Xmc,Xtruth);
+pdfXpostnorm = get_interp_pdf_0I_6D_gobackget(model,Xpost,postprobs,4,Tk,time.Tvec(Tk),time.dt,pdfnormprior,Xmc,Xtruth);
+
 
 y=pdfXpostnorm.transForms.trueX2normX(Xpost);
 py=pdfXpostnorm.func(y);

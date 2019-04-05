@@ -211,6 +211,7 @@ axis square
 hold off
 if saveprops.saveit==1
     saveas(gcf,[saveprops.plotfolder,'/NormContour_',nametag,'_',num2str(Tk)],'png')
+    figure(71)
     saveas(gcf,[saveprops.plotfolder,'/NormContour_',nametag,'_',num2str(Tk)],'fig')
 end
 %%

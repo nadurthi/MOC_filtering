@@ -157,10 +157,10 @@ model.gmmmethod='ut';
 
 % generate points on contours for characterisitc solutions
 
-% model.pointGenerator = @(mx,Px)GH_points(mx,Px,5);
-model.pointGenerator = @(mx,Px)mvnrnd(mx(:)',Px,20000);
+model.pointGenerator = @(mx,Px)GH_points(mx,Px,5);
+% model.pointGenerator = @(mx,Px)mvnrnd(mx(:)',Px,20000);
 
-model.pointscalefactor = 1.5;
+model.pointscalefactor = 0.6;
 [X,w] = model.pointGenerator(zeros(model.fn,1),model.pointscalefactor^2*eye(model.fn));
 
 % [X1,w] = GH_points(zeros(model.fn,1),0.5^2*eye(model.fn),5);
@@ -188,6 +188,24 @@ model.quadfunc=@(x,P)UT_sigmapoints(x,P,2);
 [Xquad_initial,wquad_initial]=model.quadfunc(xf0(:),Pf0);
 probs_quad = mvnpdf(Xquad_initial,xf0(:)',Pf0);
 
+
+Npt=size(Xinitial,1);
+Xpttraj=zeros(Npt,model.fn,time.Ntsteps);
+Xpttraj(:,:,1)=Xinitial;
+for i=1:Npt
+    i
+    for k=2:time.Ntsteps
+        Xpttraj(i,:,k)=model.f(time.dt,time.Tvec(k-1),Xpttraj(i,:,k-1));
+    end
+end
+p=9;
+Xr = zeros(Npt,model.fn);
+for ii=1:Npt
+    Xr(ii,:) = Xpttraj(ii,:,p);
+end
+
+figure
+plot3(Xr(:,1),Xr(:,2),Xr(:,3),'bo')
 
 
 %% run filter

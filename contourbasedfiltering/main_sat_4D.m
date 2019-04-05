@@ -39,7 +39,7 @@ constants.normT2trueT=(constants.TU);
 
 time.t0=0 *constants.trueT2normT;
 time.tf=48*60*60 *constants.trueT2normT;
-time.dt=12*60*60 *constants.trueT2normT;
+time.dt=6*60*60 *constants.trueT2normT;
 time.dtplot=0.1*60*60 *constants.trueT2normT;
 
 time.Tvec=time.t0:time.dt:time.tf;
@@ -61,7 +61,7 @@ model.h=@(xnorm)radmodel_2D(xnorm,constants);
 model.hn=1;
 model.hvec=@(x)sensmodel2vec(x,model.h,model.hn);
 % model.R=diag([(2*pi/180)^2]);
-model.R=diag([(0.1*pi/180)^2]);
+model.R=diag([(0.5*pi/180)^2]);
 model.hstates = {'azi'};
 % model.R=diag([(0.1/constants.Re)^2]);
 model.z_pdf =  @(z,x)mvnpdf(z,model.h(x),model.R);
@@ -219,7 +219,7 @@ histXpost{1,1} = X;
 histXpost{1,2} = probs;
 teststeps = [33];
 
-plotfolder='simulations/SAT4Dsim1_props';
+plotfolder='simulations/SAT4meas_test2';
 mkdir(plotfolder)
 
 savePriorProps.plotfolder=[plotfolder,'/prior'];
@@ -276,7 +276,7 @@ for k=2:time.Ntsteps
 %     fullnormpdf=get_interp_pdf_0I_2D(X,probs,mX,PX,4,k,[],Xtruth(k,:),plotsconf); %Xtruth(k,:)
     priorpdfnorm=fullnormpdf;
     
-    
+    figure(1)
     plotpdfs_prior_4D([1,2],k,fullnormpdf,X,probs,xfquad,Pfquad,Xmctest,Xtruth(k,:),model,savePriorProps)
     
 %     keyboard
@@ -303,6 +303,7 @@ for k=2:time.Ntsteps
             
             % %%%%%%%%%%%%%%%%% MEAS UPDATE %%%%%%%%%%%%%%%%%%%%%%
 %             [X,probs,fullnormpdf] =       MeasUpdt_character_modf(X,probs,3,k,zk,Xtruth(k,:),model,Xmctest,11);
+%             keyboard
             [X,probs,fullnormpdf] = MeasUpdt_character_modf_4Dsat(X,probs,priorpdfnorm,4,k,zk,Xtruth(k,:),model,Xmctest,5);
             
 %             [X,probs,fullnormpdf]=MeasUpdt_character_modf(fullnormpdf,X,probs,4,k,zk,Xtruth,model,Xmctest);

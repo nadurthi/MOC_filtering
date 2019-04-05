@@ -100,10 +100,11 @@ else
     end
     toc
     cc=min(beq);
+    cc
     if cc<=0
-        bineq = -2*ones(size(Aineq,1),1);
+        bineq = -(10)*ones(size(Aineq,1),1);
     else
-        bineq = (0.1*cc+0.9*(-2))*ones(size(Aineq,1),1);
+        bineq = (0.2*cc+0.8*(-10))*ones(size(Aineq,1),1);
     end
     
 end

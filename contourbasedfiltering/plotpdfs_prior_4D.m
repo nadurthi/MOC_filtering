@@ -34,7 +34,7 @@ end
 
 [mXn,PXn] = MeanCov(Xn,pn/sum(pn));
 
-[Xx,Xy]=meshgrid(linspace(-2,2,50),linspace(-2,2,50) );
+[Xx,Xy]=meshgrid(linspace(-1.7,1.7,50),linspace(-1.7,1.7,50) );
 
 
 pdfprobs_norm_cell = cell(size(Xx,1),1);
@@ -98,6 +98,9 @@ end
 
 %%
 
+figure(1)
+hold off
+
 figure(2)
 hold off
 contour(Xx,Xy,pdfprobs_norm,100)
@@ -120,6 +123,8 @@ axis square
 hold off
 if saveprops.saveit==1
     saveas(gcf,[saveprops.plotfolder,'/NormContour_',nametag,'_',num2str(Tk)],'png')
+    pause(0.5)
+    figure(2)
     saveas(gcf,[saveprops.plotfolder,'/NormContour_',nametag,'_',num2str(Tk)],'fig')
 end
 %%

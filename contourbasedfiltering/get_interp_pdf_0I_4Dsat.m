@@ -101,7 +101,7 @@ Xineq = [Xbnd1];
 
 disp(['Running GMM hull'])
 GMMHull = GMMFitDataSet(dsX.X,dsX.p);
-GMMHull.SetGMM_Hull(25);
+GMMHull.SetGMM_Hull(12);
 
 indbnd = GMMHull.IsInsideHull(Xineq,1.3);
 Xineq = Xineq(~indbnd,:);
@@ -126,8 +126,8 @@ Nineq = size(Xineq,1);
 LB = -2*ones(dim,1);
 UB = 2*ones(dim,1);
 
-LBtest=-1.5*ones(dim,1);
-UBtest=1.5*ones(dim,1);
+LBtest=-1.7*ones(dim,1);
+UBtest=1.7*ones(dim,1);
 
 % XtestingMC = mvurnd(LB,UB,20000);
 
@@ -182,7 +182,7 @@ end
 %     mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_Aineq(Pf,Xineq,XtestingMC);
 %     mxentpoly_norm =ExpPolyfitter.fitExpPoly_A_Atop_AdaptiveC(Pf,XtestingMC);
     
-    SS = mvurnd(LB,UB,10000);
+    SS = mvurnd(LBtest,UBtest,10000);
     [pSS,plogSS]=RIF.evalfit(SS);
     
 %     pSS = evaluate_PolyforLargetSetX(mxentpoly_norm,SS);
@@ -190,7 +190,7 @@ end
     
     figure(37)
     states=[1,2];
-    RIF.plot(dsX.X,dsX.p,SS,states,LB,UB);
+    RIF.plot(dsX.X,dsX.p,SS,states,LBtest,UBtest);
     hold off
     
 %     figure(40)

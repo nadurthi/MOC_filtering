@@ -32,6 +32,8 @@ probsXpost = exp(logprobsXpost);
 
 
 [Xpost,postprobs] = SimpleGHpostSampler(X,probs,probsXpost,pdfnormprior,model,z,11,0.5);
+
+
 % keyboard
 %%
 
@@ -43,11 +45,8 @@ plot3(X(:,1),X(:,2),probs/sum(probs),'ro',X(:,1),X(:,2),probsXpost/sum(probsXpos
 
 
 [mX,PX] = MeanCov(Xpost,postprobs/sum(postprobs));
-try
-    pdfXpostnorm = get_interp_pdf_0I_4Dsat(Xpost,postprobs,mX,PX,Nm,3,Tk,Xmc,Xtruth);
-catch
-    keyboard
-end
+pdfXpostnorm = get_interp_pdf_0I_4Dsat(Xpost,postprobs,mX,PX,Nm,3,Tk,Xmc,Xtruth);
+
 y=pdfXpostnorm.transForms.trueX2normX(Xpost);
 py=pdfXpostnorm.func(y);
 probsXpost2=pdfXpostnorm.transForms.normprob2trueprob(py);

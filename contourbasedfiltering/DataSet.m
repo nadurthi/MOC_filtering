@@ -164,6 +164,22 @@ classdef DataSet < handle
             
             pt =  p/det(A);
         end
+        function pt = ApplyAffineTransformProb_Original2Final(obj,p)
+            
+            p=p(:);
+            
+            [A,m]=obj.GetAffineTransform_Original2Final();
+            
+            pt =  p/det(A);
+        end
+        function pt = ApplyAffineTransformProb_Final2Original(obj,p)
+            
+            p=p(:);
+            
+            [A,m]=obj.GetAffineTransform_Final2Original();
+            
+            pt =  p/det(A);
+        end
         
         % Some helpful functions
         function obj = SortByProb(obj,dir)

@@ -215,13 +215,13 @@ classdef GMMFitDataSet < handle
                 Ag(:,i) = mvnpdf(XX,obj.GMMhull.mx{i}',obj.GMMhull.Px{i});
             end
             bg = pp;
-            
+%             wg=fmincon(@(wg)norm((Ag*wg-bg)./(bg+1),4),ones(Ngcomp,1)/Ngcomp,[],[],ones(1,Ngcomp),1,zeros(Ngcomp,1),ones(Ngcomp,1) );
             cvx_begin
                 variables wg(Ngcomp) t(Np)
-                minimize( norm((Ag*wg-bg)./(bg+1),4) )
+                minimize( norm((Ag*wg-bg)./(bg+1),2) )
                 subject to
                 wg>=0;
-                sum(wg)==1;
+%                 sum(wg)==1;
             cvx_end
             wg = wg+0.0001;
             wg = wg/sum(wg);
@@ -287,7 +287,43 @@ classdef GMMFitDataSet < handle
             end
       
         end
-        
+        function X = gen_quad_GMM_GH_4D(obj,Nqmax)
+%             switch(method)
+%                 case 'UT'
+%                     qd_pts=UT_sigmapoints(m,P,2);
+%                 case 'GH'
+%                     qd_pts=@(m,P)GH_pts(m,P,para);
+%             end
+            X=[];
+            for i=1:obj.GMM.Ngcomp
+               if obj.GMM.w(i)>0.5
+                   Npara=9;
+                   c=0.2;
+               elseif obj.GMM.w(i)>0.3 && obj.GMM.w(i)<=0.5  
+                   Npara=9;
+                   c=0.2;
+               elseif obj.GMM.w(i)>0.1 && obj.GMM.w(i)<=0.3
+                   Npara=8;
+                   c=0.2;
+               elseif obj.GMM.w(i)>1e-2 && obj.GMM.w(i)<=0.1
+                   Npara=5;
+                   c=0.2;
+               elseif obj.GMM.w(i)>1e-5 && obj.GMM.w(i)<=1e-2
+                   Npara=3;
+                   c=0.2;
+               elseif obj.GMM.w(i)<1e-5
+                   Npara=0;
+                   c=0.2;
+               end
+               if Npara==0
+                   x=[];
+               else
+                    x = GH_pts(obj.GMM.mx{i},c^2*obj.GMM.Px{i},Npara);
+               end
+               X=vertcat(X,x);
+            end
+      
+        end
         %%
         
         function plotGMMpoints(obj,states,c)

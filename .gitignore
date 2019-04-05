@@ -7,3 +7,7 @@ contourbasedfiltering/simulations/SAT6Dsim1_props_decisionTree/sim1.mat
 contourbasedfiltering/simulations/SAT4Dsim1_props_verygood/sim1.mat
 contourbasedfiltering/simulations.zip
 
+*.h5
+*.mat
+*.zip
+*.7z

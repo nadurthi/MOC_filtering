@@ -41,7 +41,7 @@ for i=1:GMMhull.Ngcomp
         b2=GMMhull.b{j};
 
         cvx_begin
-            variables x1(2) x2(2)
+            variables x1(dim) x2(dim)
             minimize( norm(x1-x2) )
             subject to
             norm( A1 * x1 + b1, 2 ) <= 1;

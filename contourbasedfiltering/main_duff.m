@@ -328,22 +328,48 @@ for k=2:time.Ntsteps
     Sig_quad(k,:) = diag(sqrtm(Pfquad));
     
 end
+
+fff=plotfolder;
+fff='simulations/duffsim_thmeas_polyGHGMMresample_good';
 ppp=1;
 figure
-plot(time.Tvec(2:end),Err_Xpost(2:end,ppp),'b',time.Tvec(2:end),Err_Xpost(2:end,ppp)+ 3*Sig_Xpost(2:end,ppp),'r--',time.Tvec(2:end),Err_Xpost(2:end,ppp)- 3*Sig_Xpost(2:end,ppp),'r--')
+plot(time.Tvec(2:end),Err_Xpost(2:end,ppp),'b',time.Tvec(2:end),Err_Xpost(2:end,ppp)+ 3*Sig_Xpost(2:end,ppp),'r--',time.Tvec(2:end),Err_Xpost(2:end,ppp)- 3*Sig_Xpost(2:end,ppp),'r--','linewidth',2)
+xlabel('time')
+ylabel('x_1 - error')
+grid
+plot_prop_paper_2D
+saveas(gcf,[fff,'/','reg_x1err'],'png')
+saveas(gcf,[fff,'/','reg_x1err'],'fig')
 
 ppp=1;
 figure
-plot(time.Tvec(2:end),Err_quad(2:end,ppp),'b',time.Tvec(2:end),Err_quad(2:end,ppp)+ 3*Sig_quad(2:end,ppp),'r--',time.Tvec(2:end),Err_quad(2:end,ppp)- 3*Sig_quad(2:end,ppp),'r--')
+plot(time.Tvec(2:end),Err_quad(2:end,ppp),'b',time.Tvec(2:end),Err_quad(2:end,ppp)+ 3*Sig_quad(2:end,ppp),'r--',time.Tvec(2:end),Err_quad(2:end,ppp)- 3*Sig_quad(2:end,ppp),'r--','linewidth',2)
+xlabel('time')
+ylabel('x_1 - error')
+grid
+plot_prop_paper_2D
+saveas(gcf,[fff,'/','quad_x1err'],'png')
+saveas(gcf,[fff,'/','quad_x1err'],'fig')
 
 ppp=2;
 figure
-plot(time.Tvec(2:end),Err_Xpost(2:end,ppp),'b',time.Tvec(2:end),Err_Xpost(2:end,ppp)+ 3*Sig_Xpost(2:end,ppp),'r--',time.Tvec(2:end),Err_Xpost(2:end,ppp)- 3*Sig_Xpost(2:end,ppp),'r--')
+plot(time.Tvec(2:end),Err_Xpost(2:end,ppp),'b',time.Tvec(2:end),Err_Xpost(2:end,ppp)+ 3*Sig_Xpost(2:end,ppp),'r--',time.Tvec(2:end),Err_Xpost(2:end,ppp)- 3*Sig_Xpost(2:end,ppp),'r--','linewidth',2)
+xlabel('time')
+ylabel('x_2 - error')
+grid
+plot_prop_paper_2D
+saveas(gcf,[fff,'/','reg_x2err'],'png')
+saveas(gcf,[fff,'/','reg_x2err'],'fig')
 
 ppp=2;
 figure
-plot(time.Tvec(2:end),Err_quad(2:end,ppp),'b',time.Tvec(2:end),Err_quad(2:end,ppp)+ 3*Sig_quad(2:end,ppp),'r--',time.Tvec(2:end),Err_quad(2:end,ppp)- 3*Sig_quad(2:end,ppp),'r--')
-
+plot(time.Tvec(2:end),Err_quad(2:end,ppp),'b',time.Tvec(2:end),Err_quad(2:end,ppp)+ 3*Sig_quad(2:end,ppp),'r--',time.Tvec(2:end),Err_quad(2:end,ppp)- 3*Sig_quad(2:end,ppp),'r--','linewidth',2)
+xlabel('time')
+ylabel('x_2 - error')
+grid
+plot_prop_paper_2D
+saveas(gcf,[fff,'/','quad_x2err'],'png')
+saveas(gcf,[fff,'/','quad_x2err'],'fig')
 
 
 

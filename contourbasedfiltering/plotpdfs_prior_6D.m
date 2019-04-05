@@ -1,11 +1,14 @@
 function plotpdfs_prior_6D(states,Tk,pdfnorm,X,probs,mquadf,Pquadf,Xmc,Xtruth,model,saveprops)
-nametag='prior';
+tagcoordstr=10*states(1)+states(2);
+tagcoordstr = num2str(tagcoordstr);
+nametag=strcat([tagcoordstr,'_prior']);
 
 %%
 dim=size(X,2);
 states2keep = states;
 states2remove = 1:dim;
 states2remove(states2keep)=[];
+
 
 
 Xn = pdfnorm.transForms.trueX2normX(X);
@@ -28,14 +31,20 @@ if isempty(mquadf)==0
     mquadfnorm=mquadfnorm(:);
 end
 
-
+[a,ain]=max(pn);
+maxXn = Xn(ain,:);
 
 % keyboard
 
 [mXn,PXn] = MeanCov(Xn,pn/sum(pn));
 
-[Xx,Xy]=meshgrid(linspace(-2,2,50),linspace(-2,2,50) );
+[Xx,Xy]=meshgrid(linspace(-1.2,1.2,35),linspace(-1.2,1.2,35) );
 
+remdim=length(states2remove);
+remdomainLB=-1.2*ones(remdim,1);
+remdomainUB=1.2*ones(remdim,1);
+volremdom = prod(remdomainUB-remdomainLB);
+[Xstates2remove,wrem]=GLgn_pts(remdomainLB,remdomainUB,7);
 
 pdfprobs_norm_cell = cell(size(Xx,1),1);
 QuadFilprobs_norm_cell = cell(size(Xx,1),1);
@@ -45,13 +54,23 @@ parfor i=1:size(Xx,1)
     Xpoint = zeros(size(Xx,2),dim);
     Xpointquad = zeros(size(Xx,2),dim);
     for j=1:size(Xx,2)
-        Xpoint(j,states2keep) = [Xx(i,j),Xy(i,j)];
-        Xpoint(j,states2remove) = mXn(states2remove);
-        
         Xpointquad(j,states2keep) = [Xx(i,j),Xy(i,j)];
         Xpointquad(j,states2remove) = mquadfnorm(states2remove);
     end
-    pdfprobs_norm = pdfnorm.func(Xpoint);
+    pmargnorm = zeros(size(Xx,2),1);
+    for j=1:size(Xx,2)
+        Xpoint(j,states2keep) = [Xx(i,j),Xy(i,j)];
+        pmargnorm(j) = 0;
+        for ss=1:size(Xstates2remove,1)
+            Xpoint(j,states2remove) = Xstates2remove(ss,:);
+            pmargnorm(j)=pmargnorm(j)+wrem(ss)*pdfnorm.func(Xpoint(j,:));
+        end
+        
+    end
+    pmargnorm=volremdom*pmargnorm;
+    
+    
+    pdfprobs_norm = pmargnorm;
     QuadFilprobs_norm = mvnpdf(Xpointquad,mquadfnorm',Pquadfnorm);
     
 %     for j=1:size(Xx,2)
@@ -105,10 +124,10 @@ grid on
 box off
 hold on
 if isempty(Xmc)==0
-    plot(Xmcnorm(:,1),Xmcnorm(:,2),'r.')
+    plot(Xmcnorm(:,states(1)),Xmcnorm(:,states(2)),'r.')
 end
 if isempty(Xtruth)==0
-    plot(Xtruthnorm(:,1),Xtruthnorm(:,2),'k*','linewidth',2)
+    plot(Xtruthnorm(:,states(1)),Xtruthnorm(:,states(2)),'k*','linewidth',2)
 end
 
 % title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
@@ -132,10 +151,10 @@ hold on
 % plot3(Xn(:,1),Xn(:,2),pn,'bo')
 
 if isempty(Xmc)==0
-    plot(Xmcnorm(:,1),Xmcnorm(:,2),'r.')
+    plot(Xmcnorm(:,states(1)),Xmcnorm(:,states(2)),'r.')
 end
 if isempty(Xtruthnorm)==0
-    plot(Xtruthnorm(:,1),Xtruthnorm(:,2),'k*','linewidth',2)
+    plot(Xtruthnorm(:,states(1)),Xtruthnorm(:,states(2)),'k*','linewidth',2)
 end
 
 % title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
@@ -211,10 +230,10 @@ grid on
 box off
 hold on
 if isempty(Xmc)==0
-    plot(Xmcnorm(:,1),Xmcnorm(:,2),'r.')
+    plot(Xmcnorm(:,states(1)),Xmcnorm(:,states(2)),'r.')
 end
 if isempty(Xtruth)==0
-    plot(Xtruthnorm(:,1),Xtruthnorm(:,2),'k*','linewidth',2)
+    plot(Xtruthnorm(:,states(1)),Xtruthnorm(:,states(2)),'k*','linewidth',2)
 end
 
 % title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
@@ -238,10 +257,10 @@ hold on
 % plot3(Xn(:,1),Xn(:,2),pn,'bo')
 
 if isempty(Xmc)==0
-    plot(Xmcnorm(:,1),Xmcnorm(:,2),'r.')
+    plot(Xmcnorm(:,states(1)),Xmcnorm(:,states(2)),'r.')
 end
 if isempty(Xtruth)==0
-    plot(Xtruthnorm(:,1),Xtruthnorm(:,2),'k*','linewidth',2)
+    plot(Xtruthnorm(:,states(1)),Xtruthnorm(:,states(2)),'k*','linewidth',2)
 end
 
 % title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
