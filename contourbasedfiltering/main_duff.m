@@ -73,7 +73,12 @@ plot(x(:,1),x(:,2),'b')
 axis equal
 axis square
 
-
+figure
+for i=1:size(x,1)
+    plot(x(1:i,1),x(1:i,2),'bo-')
+    title(num2str(t(i)))
+    pause(0.2)
+end
 % plotting the propagatin of MC
 Nmc=1000;
 XMC=zeros(Nmc,model.fn,time.Ntsteps);

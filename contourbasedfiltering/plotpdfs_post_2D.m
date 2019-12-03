@@ -1,9 +1,11 @@
-function plotpdfs_post_2D(Tk,pdfnormprior,pdfnorm,model,XtruthplotAll,X,probs,mquadf,Pquadf,GMM,Xmc,Xtruth,zk,saveprops)
+function plotpdfs_post_2D(Tk,pdfnormprior,pdfnorm,model,XtruthplotAll,X,probs,mquadf,Pquadf,mquadfprior,Pquadfprior,X_pf, w_pf,X_pfprior,w_pfprior,GMM,Xmc,Xtruth,zk,saveprops)
 nametag='post';
-
+states=[1,2];
+states2keep=states;
 Xn = pdfnorm.transForms.trueX2normX(X);
 pn = pdfnorm.transForms.trueprob2normprob(probs);
 
+dim = model.fn;
 
 if isempty(Xmc)==0
     Xmcnorm = pdfnorm.transForms.trueX2normX(Xmc) ;
@@ -16,13 +18,52 @@ end
 %     x = pdfnorm.transForms.trueX2normX(x) ;
 %     [mquadfnorm,Pquadfnorm]=MeanCov(x,w);
 % end
+%% resample pf to make equal weightd
+Npf=length(w_pf);
+I = myresampling(w_pf);
+I = round(I);
+X_old=X_pf;
+for j = 1 : Npf
+    X_pf(:,j) = X_old(:,I(j));
+end
+w_pf = ones(1,Npf)/Npf;
 
+I = myresampling(w_pfprior);
+I = round(I);
+X_old=X_pfprior;
+for j = 1 : Npf
+    X_pfprior(:,j) = X_old(:,I(j));
+end
+w_pfprior = ones(1,Npf)/Npf;
+
+X_pfnorm=zeros(size(X_pf));
+X_pfpriornorm=zeros(size(X_pf));
+for i=1:Npf
+ X_pfnorm(:,i)=pdfnorm.transForms.trueX2normX(X_pf(:,i)');
+ X_pfpriornorm(:,i)=pdfnorm.transForms.trueX2normX(X_pfprior(:,i)');
+end
+bwpost=zeros(1,dim);
+bwprior=zeros(1,dim);
+
+Npf = length(w_pf);
+for i=1:dim
+    s=std(X_pfnorm(:,i));
+    bwpost(i) = s*(4/((dim+2)*Npf))^(1/(dim+4));
+    
+    s=std(X_pfpriornorm(:,i));
+    bwprior(i) = s*(4/((dim+2)*Npf))^(1/(dim+4));
+    
+end
+
+
+
+%%
 Pquadf(1,2)=Pquadf(2,1);
 
 [Xx,Xy]=meshgrid(linspace(-2,2,50),linspace(-2,2,50) );
 pdfprobs_norm = zeros(size(Xx));
 QuadFilprobs_norm = zeros(size(Xx));
-GMMprobs_norm = zeros(size(Xx));
+% GMMprobs_norm = zeros(size(Xx));
 for i=1:size(Xx,1)
     for j=1:size(Xx,2)
         norm_pt = [Xx(i,j),Xy(i,j)];
@@ -34,8 +75,8 @@ for i=1:size(Xx,1)
         ptrue = mvnpdf(true_pt,mquadf(:)',Pquadf);
         QuadFilprobs_norm(i,j) = pdfnorm.transForms.trueprob2normprob(ptrue);
 
-        ptrue = evalGMM(GMM,true_pt);
-        GMMprobs_norm(i,j) = pdfnorm.transForms.trueprob2normprob(ptrue);
+%         ptrue = evalGMM(GMM,true_pt);
+%         GMMprobs_norm(i,j) = pdfnorm.transForms.trueprob2normprob(ptrue);
         
     end
 end
@@ -47,9 +88,23 @@ normproblinspace = linspace(1.1*normminprob,0.9*normmaxprob,100);
 pdfprobs_true = zeros(size(Xx));
 priorpdfprobs_true = zeros(size(Xx));
 QuadFilprobs_true = zeros(size(Xx));
-GMMprobs_true = zeros(size(Xx));
+% GMMprobs_true = zeros(size(Xx));
 Xx_true = zeros(size(Xx));
 Xy_true = zeros(size(Xx));
+
+[a,b]=size(Xx);
+
+kspfpdfnormpost = mvksdensity(X_pfnorm(states2keep,:)',[reshape(Xx,a*b,1),reshape(Xy,a*b,1)],...
+	'Bandwidth',bwpost(states2keep),...
+	'Kernel','normpdf');
+
+kspfpdfnormprior = mvksdensity(X_pfpriornorm(states2keep,:)',[reshape(Xx,a*b,1),reshape(Xy,a*b,1)],...
+	'Bandwidth',bwprior(states2keep),...
+	'Kernel','normpdf');
+
+kspfpdfnormpost=reshape(kspfpdfnormpost,a,b);
+kspfpdfnormprior=reshape(kspfpdfnormprior,a,b);
+
 for i=1:size(Xx,1)
     for j=1:size(Xx,2)
         pttrue=pdfnorm.transForms.normX2trueX([Xx(i,j),Xy(i,j)]);
@@ -62,7 +117,7 @@ for i=1:size(Xx,1)
         priorpdfprobs_true(i,j) = pdfnormprior.transForms.normprob2trueprob( prior_prob_norm );
         
         QuadFilprobs_true(i,j) = mvnpdf([Xx_true(i,j),Xy_true(i,j)],mquadf(:)',Pquadf);
-        GMMprobs_true(i,j) = evalGMM(GMM,[Xx_true(i,j),Xy_true(i,j)]);
+%         GMMprobs_true(i,j) = evalGMM(GMM,[Xx_true(i,j),Xy_true(i,j)]);
         
     end
 end
@@ -82,11 +137,30 @@ sqPz = sqrtm(Pz);
 % keyboard
 if model.hn==1
     Zx = linspace(mz-3*sqPz,mz+3*sqPz,100);
+%     Pzprobs_true = zeros(size(Zx));
+%     for i=1:1:length(Zx)
+%         I = integratorFuncTrueX_usingpdfnorm(pdfnormprior,@(x)mvnpdf(repmat(Zx(i),size(x,1),1),model.h(x),model.R),'RegTreeBoxIntegrator');
+%         Pzprobs_true(i) = I;
+%     end
     Pzprobs_true = zeros(size(Zx));
+%     J=cell(size(Zx,1),1);
+    LB=-1.1*ones(1,dim);
+    UB=1.1*ones(1,dim);
+    voll = prod(UB-LB);
+    [XX,WW]=GLgn_pts(LB,UB,9);
+    %         keyboard
     for i=1:1:length(Zx)
-        I = integratorFuncTrueX_usingpdfnorm(pdfnormprior,@(x)mvnpdf(repmat(Zx(i),size(x,1),1),model.h(x),model.R),'RegTreeBoxIntegrator');
-        Pzprobs_true(i) = I;
+        i
+
+            zz=Zx(i);
+            pnorm = pdfnormprior.func(XX);
+            Xtr=pdfnormprior.transForms.normX2trueX(XX);
+            pz=mvnpdf(repmat(zz,size(Xtr,1),1),model.hvec(Xtr),model.R);
+            Pzprobs_true(i)=sum(WW.*pnorm.*pz);
+
+
     end
+
     Pzk = interp1(Zx,Pzprobs_true,zk);
     figure(93)
     plot(Zx,Pzprobs_true,'b',zk,0,'k^',[zk,zk],[0,Pzk],'k--','linewidth',2,'MarkerSize',6)
@@ -465,4 +539,67 @@ if saveprops.saveit==1
     saveas(gcf,[saveprops.plotfolder,'/BothTrueSurf_',nametag,'_',num2str(Tk)],'png')
     saveas(gcf,[saveprops.plotfolder,'/BothTrueSurf_',nametag,'_',num2str(Tk)],'fig')
 end
+
+
+
+
+%% -------------------- KS-density pf ------------------------------------------------------------------------
+
+
+
+figure(77)
+contour(Xx,Xy,kspfpdfnormpost,20,'r','linewidth',1)
+hold on
+contour(Xx,Xy,kspfpdfnormprior,20,'b','linewidth',1)
+
+grid on
+box off
+hold on
+if isempty(Xmc)==0
+    plot(Xmcnorm(:,states(1)),Xmcnorm(:,states(2)),'r.')
 end
+if isempty(Xtruth)==0
+    plot(Xtruthnorm(:,states(1)),Xtruthnorm(:,states(2)),'k*','linewidth',2)
+end
+
+% title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
+xlabel(model.fstates{states(1)})
+ylabel(model.fstates{states(2)})
+axis equal
+axis square
+hold off
+if saveprops.saveit==1
+    saveas(gcf,[saveprops.plotfolder,'/kspfFilNormPostPriorContour_',nametag,'_',num2str(Tk)],'png')
+    saveas(gcf,[saveprops.plotfolder,'/kspfFilNormPostPriorContour_',nametag,'_',num2str(Tk)],'fig')
+end
+%%
+figure(78)
+surf(Xx,Xy,kspfpdfnormpost,'FaceColor','red','EdgeColor','none','FaceAlpha',0.7);
+camlight right; lighting phong
+alpha 0.4
+hold on
+
+surf(Xx,Xy,kspfpdfnormprior,'FaceColor','blue','EdgeColor','none','FaceAlpha',0.7);
+camlight right; lighting phong
+alpha 0.4
+
+% plot3(Xn(:,1),Xn(:,2),pn,'bo')
+
+if isempty(Xmc)==0
+    plot(Xmcnorm(:,states(1)),Xmcnorm(:,states(2)),'r.')
+end
+if isempty(Xtruth)==0
+    plot(Xtruthnorm(:,states(1)),Xtruthnorm(:,states(2)),'k*','linewidth',2)
+end
+
+% title(['time step = ',num2str(Tk),' cond = ',num2str(cond(Pquad))])
+xlabel(model.fstates{states(1)})
+ylabel(model.fstates{states(2)})
+axis equal
+axis square
+hold off
+if saveprops.saveit==1
+    saveas(gcf,[saveprops.plotfolder,'/kspfFilNormPostPriorSurf_',nametag,'_',num2str(Tk)],'png')
+    saveas(gcf,[saveprops.plotfolder,'/kspfFilNormPostPriorSurf_',nametag,'_',num2str(Tk)],'fig')
+end
+

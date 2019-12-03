@@ -1,34 +1,20 @@
-function pdfnorm = get_interp_pdf_0I_6D_gobackget(model,Xk,probsk,Nm,Tstepk1,Tk1,dtkk1,priorpdfnormk,Xmctest,Xtruth)
+function [pdfnorm,Xnew,probsnew] = get_interp_pdf_0I_6D_gobackget(model,priorfullnormpdf,Xk1,probsk1,Nm,Tstepk1,Tk1,dtkk1,Xmctest,Xtruth)
 % known prior pdf priorpdfnormk at time k
 % compute pdfnorm or pdfnormk1 at time k+1
 % Tk1 is time at k+1,
 % dtkk1 is deltat from k to k+1
+
 %%
-% [N,dim] =size(X);
+[N,dim] =size(Xk1);
 
-[mXk1,PXk1]=MeanCov(Xk,probsk/sum(probsk));
-
-mXk1=mXk1(:);
-dim = length(mXk1);
-
-% probs = PROBS;
-% X=XX;
-% mquad = MMQ;
-% Pquad = PPQUAD;
-%
-% sqP = sqrtm(Pquad);
-% diag_sqP = diag(sqP);
-% bndslb = mquad(:)'-3*diag_sqP(:)';
-% bndsub = mquad(:)'+3*diag_sqP(:)';
-%
-% [X,probs]=filterX_inBox(X,probs,bndslb,bndsub);
-% [mquad,Pquad]=MeanCov(X,probs/sum(probs));
-
-dsX = DataSet(Xk,probsk,'TrueState');
+[mXk1,PXk1]=MeanCov(Xk1,probsk1/sum(probsk1));
 
 
-dsX.AddMeanCov_to_OI_Trasform(mXk1,PXk1);
-dsX.AddHyperCubeTrasform(-1*ones(dim,1),1*ones(dim,1));
+dsX = DataSet(Xk1,probsk1,'TrueState');
+
+
+dsX.AddMeanCov_to_OI_Trasform(mXk1,3^2*PXk1);
+% dsX.AddHyperCubeTrasform(-1*ones(dim,1),1*ones(dim,1));
 
 % plot3(dsX.X(:,1),dsX.X(:,2),dsX.p,'ro')
 
@@ -51,7 +37,7 @@ end
 
 %% plottinmg
 for i=0:4
-    figure(33+i)
+    figure(80+i)
     dsX.PlotPointsProbs3D([i+1,i+2],'ro');
     hold on
     if isempty(Xmctest)==0
@@ -64,245 +50,240 @@ for i=0:4
     hold off
 end
 
-%% First fit Ngcomp gaussian components to the points
 
-% GMMfitter = GMMFitDataSet(dsX.X,dsX.p);
-% % GMM = GMMfitter.FitGMM_1comp();
-% GMM = GMMfitter.FitGMM_kmeans_optimwt(5);
-%
-% % figure(36)
-% % GMMfitter.plotGMMpointsHUll([1,2],2,'ro')
-%
-% figure(34)
-% GMMfitter.plotGMMpoints([1,2],'ro')
-% title('GMM fit points')
-% hold off
-%
-% figure(35)
-% GMMfitter.plotGMMSurf([1,2],'ro')
-% title('GMM fit surf')
-% hold off
+%% Form the hyepercube and go get back the fucntion valuess
+% startpdfdata = pdftraj{Tstepk1,1};
+transForms_atk = priorfullnormpdf.transForms;
+normpdf_atk = priorfullnormpdf.func;
+normpdfexp_atk = priorfullnormpdf.expfunc;
+transForms_atk1 = dsX.GetTrasnformers();
 
-% keyboard
-%% GMM HULL
-LBtest=-1.5*ones(1,dim);
-UBtest=1.5*ones(1,dim);
-Xineq=[];
-% [Xineq1,~] = GLgn_pts(-1.5*ones(1,dim),1.5*ones(1,dim),5);
-Xineq = mvurnd(LBtest,UBtest,20000);
+LB=-ones(dim,1);
+UB=ones(dim,1);
 
-disp(['Running GMM hull'])
-GMMHull = GMMFitDataSet(dsX.X,dsX.p);
-GMMHull.SetGMM_Hull(15);
+% first get the test points
+Xcheckk1 = mvurnd(0.8*LB,0.8*UB,dim*5000);
+probscheck1 = zeros(size(Xcheckk1,1),1);
+logprobscheck1 = zeros(size(Xcheckk1,1),1);
 
-indbnd = GMMHull.IsInsideHull(Xineq,1.3);
-Xineq = Xineq(~indbnd,:);
-figure(26)
-GMMHull.plotGMMpointsHUll([1,2],Xineq,1.2,'ro')
-hold on
-plot3(Xineq(:,1),Xineq(:,2),-ones(size(Xineq,1),1),'b+')
-hold off
-title('GMM HUll')
+for i=1:size(Xcheckk1,1)
+    xnorm = Xcheckk1(i,:);
+    %     [xk1,~]=transForms_atk1.normX2trueX(x) ;
+    %
+    %     xk = model.fback(dtkk1,Tk1,xk1);
+    %     xknorm = transForms_atk.trueX2normX(xk);
+    %     pknorm = normpdf_atk(xknorm);
+    %     pk = transForms_atk.normprob2trueprob(pknorm);
+    %     pk1 = pk; % as sat dynamics do not diverge
+    %     probscheck1(i)=transForms_atk1.trueprob2normprob(pk1);
+    [probscheck1(i),logprobscheck1(i)] = getbacknormprobs(model,Tk1,dtkk1,normpdf_atk,normpdfexp_atk,xnorm,transForms_atk1,transForms_atk);
+end
+% logprobscheck1=log(probscheck1+1e-12);
+figure(71)
+plot3(Xcheckk1(:,1),Xcheckk1(:,2),probscheck1,'bo')
 
+Xall=[];
+Fall=[];
+logFall=[];
+preverr=1e10;
+prevans=[];
+for qi=4
+    [Xqi,pts1Dqi,interpPoly1Dqi]=getsparsePts(dim+qi,dim);
+    
+    if isempty(Xall)
+        %         Xall = Xqi;
+        Xrest = Xqi;
+    else
+        Xrest = setdiff(Xqi,Xall,'rows');
+    end
+    %     Xk1qi = zeros(size(Xqi));
+    probsk1qi = zeros(size(Xrest,1),1);
+    logprobsk1qi = zeros(size(Xrest,1),1);
+    
+    for i=1:size(Xrest,1)
+        [probsk1qi(i),logprobsk1qi(i)] = getbacknormprobs(model,Tk1,dtkk1,normpdf_atk,normpdfexp_atk,Xrest(i,:)',transForms_atk1,transForms_atk);
+    end
+    Xall = vertcat(Xall,Xrest);
+    Fall = vertcat(Fall,probsk1qi);
+    logFall = vertcat(logFall,logprobsk1qi);
+    %     keyboard
+    
+    FuncTablelog = [Xall,logFall];
+    
+    % figure
+    % plot3(X(:,1),X(:,2),FuncTable(:,3),'bo')
+    
+    PnD=sparseProductInterpPoly(dim+qi,dim,pts1Dqi,interpPoly1Dqi,FuncTablelog,'NestedClenshawCurtis');
+    
+    Festlog=evaluate_polyND(PnD,Xall);
+    [Festlog,FuncTablelog(:,end)]
+    
+    Flogcheck = evaluate_polyND(PnD,Xcheckk1);
+    Fcheck = exp(Flogcheck);
+    max(abs((logprobscheck1-Flogcheck)))
+    ind = abs(logprobscheck1)>1e-6;
+    err=max( abs((logprobscheck1(ind)-Flogcheck(ind))./logprobscheck1(ind)) );
+    %     keyboard
+    
+    if 100*err < 1
+        %         prevans = PnD;
+        break
+    end
+    %     if err > preverr
+    %         prevans = PnD;
+    %         break
+    %     end
+    %     preverr = err;
+    %     prevans = PnD;
+    
+end
+% PnD=prevans;
+
+%% truth test
+logprobest_truth=evaluate_polyND(PnD,dsX.X);
+probest_truth = exp(logprobest_truth);
+[probest_truth,dsX.p]
+figure(89)
+plot3(dsX.X(:,1),dsX.X(:,2),probest_truth,'bo',dsX.X(:,1),dsX.X(:,2),dsX.p,'r+')
+
+keyboard
+%% debug plots
+if false
+    [xx,yy]=meshgrid(linspace(-1,1,25));
+    Fplot12 = zeros(size(xx));
+    Fplot23 = zeros(size(xx));
+    Fplot34 = zeros(size(xx));
+    Fplot45 = zeros(size(xx));
+    Fplot56 = zeros(size(xx));
+    
+    a12 = cell(size(xx,1),1);
+    a23 = cell(size(xx,1),1);
+    a34 = cell(size(xx,1),1);
+    a45 = cell(size(xx,1),1);
+    a56 = cell(size(xx,1),1);
+    
+    parfor i=1:size(xx,1)
+        a12{i}=zeros(size(xx,2),1);
+        a23{i}=zeros(size(xx,2),1);
+        a34{i}=zeros(size(xx,2),1);
+        a45{i}=zeros(size(xx,2),1);
+        a56{i}=zeros(size(xx,2),1);
+        
+        for j=1:size(xx,2)
+            [i,j]
+            %         a12{i}(j) = marginalize_exp_pdf_method2([xx(i,j),yy(i,j)],[1,2],@(g)exp(evaluate_polyND(PnD,g)),dim);
+            
+            a12{i}(j) = marginalize_exp_pdf_method2([xx(i,j),yy(i,j)],[1,2],@(g)exp(evaluate_polyND(PnD,g)),dim);
+            %         a23{i}(j) = marginalize_exp_pdf_method2([xx(i,j),yy(i,j)],[2,3],@(g)exp(evaluate_polyND(PnD,g)),dim);
+            %         a34{i}(j) = marginalize_exp_pdf_method2([xx(i,j),yy(i,j)],[3,4],@(g)exp(evaluate_polyND(PnD,g)),dim);
+            %         a45{i}(j) = marginalize_exp_pdf_method2([xx(i,j),yy(i,j)],[4,5],@(g)exp(evaluate_polyND(PnD,g)),dim);
+            %         a56{i}(j) = marginalize_exp_pdf_method2([xx(i,j),yy(i,j)],[5,6],@(g)exp(evaluate_polyND(PnD,g)),dim);
+            
+            %         Fplot12(i,j) = evaluate_polyND(PnD,[xx(i,j),yy(i,j),0,0,0,0]);
+            %         Fplot23(i,j) = evaluate_polyND(PnD,[0,xx(i,j),yy(i,j),0,0,0]);
+            %         Fplot34(i,j) = evaluate_polyND(PnD,[0,0,xx(i,j),yy(i,j),0,0]);
+            %         Fplot45(i,j) = evaluate_polyND(PnD,[0,0,0,xx(i,j),yy(i,j),0]);
+            %         Fplot56(i,j) = evaluate_polyND(PnD,[0,0,0,0,xx(i,j),yy(i,j)]);
+        end
+    end
+    for i=1:size(xx,1)
+        Fplot12(i,:)= a12{i};
+        Fplot23(i,:)= a23{i};
+        Fplot34(i,:)= a34{i};
+        Fplot45(i,:)= a45{i};
+        Fplot56(i,:)= a56{i};
+    end
+    Fplot12=exp(Fplot12)-0;
+    Fplot23=exp(Fplot23)-0;
+    Fplot34=exp(Fplot34)-0;
+    Fplot45=exp(Fplot45)-0;
+    Fplot56=exp(Fplot56)-0;
+    
+    figure(90)
+    surf(xx,yy,Fplot12,'FaceColor','r','EdgeColor','none','FaceAlpha',0.5);
+    camlight right; lighting phong
+    alpha 0.5
+    figure(91)
+    contour(xx,yy,Fplot12,15);
+    
+    
+    figure(92)
+    surf(xx,yy,Fplot23,'FaceColor','r','EdgeColor','none','FaceAlpha',0.5);
+    camlight right; lighting phong
+    alpha 0.5
+    figure(93)
+    contour(xx,yy,Fplot23,15);
+    
+    figure(94)
+    surf(xx,yy,Fplot34,'FaceColor','r','EdgeColor','none','FaceAlpha',0.5);
+    camlight right; lighting phong
+    alpha 0.5
+    figure(95)
+    contour(xx,yy,Fplot34,15);
+    
+    figure(96)
+    surf(xx,yy,Fplot45,'FaceColor','r','EdgeColor','none','FaceAlpha',0.5);
+    camlight right; lighting phong
+    alpha 0.5
+    figure(97)
+    contour(xx,yy,Fplot45,15);
+    
+    figure(98)
+    surf(xx,yy,Fplot56,'FaceColor','r','EdgeColor','none','FaceAlpha',0.5);
+    camlight right; lighting phong
+    alpha 0.5
+    figure(99)
+    contour(xx,yy,Fplot56,15);
+    
+end
+%% normalize
+xl = -1*ones(1,dim);
+xu =  1*ones(1,dim);
+vv = prod(xu-xl);
+for Ninteg=7
+    [xint,wint] = GLeg_pts(Ninteg*ones(1,dim), xl, xu);
+    pp=exp(evaluate_polyND(PnD,xint));
+    cc=vv*wint(:)'*pp(:);
+end
+disp(['norm constant is = ',num2str(cc)])
+keyboard
+% c0 = get_coeff_NDpoly(PnD,zeros(1,dim));
+% PnD = update_or_insert_coeff_NDpoly(PnD,zeros(1,dim),c0-log(cc));
 %%
-XineqTree = mvurnd(LBtest,UBtest,200000);
-indbnd = GMMHull.IsInsideHull(XineqTree,1.3);
-XineqTree = XineqTree(~indbnd,:);
-
-RigTree=RegInterpFitters('DecisionTreeAdaptiveOutRegion');
-RigTree.fit(dsX.X,dsX.p,XineqTree,[],[],GMMHull)
-% Xineq = getXineq6D(RigTree,GMMHull,20000,LBtest,UBtest);
-% indbnd = GMMHull.IsInsideHull(Xineq,1.3);
-% Xineq = Xineq(~indbnd,:);
-
-%% fitting poly to log of probas
-% keyboard
-% Nm = 3;
-
-Pf=Basis_polyND(dim,4);
-lamdim = length(Pf);
-
-
-%% reguralization points
-
-% keyboard
-%% 
-% close all
-% 
-% LB1 = -0.1*ones(dim,1);
-% UB1 = 0.1*ones(dim,1);
-% 
-% LB2 = -1*ones(dim,1);
-% UB2 = 1*ones(dim,1);
-% 
-% % LB = -0.9*ones(dim,1);
-% % UB = 0.9*ones(dim,1);
-% 
-% [Xnew,w]=GH_pts(zeros(dim,1),eye(dim),5);
-% Xnew1 = boxShift_working(Xnew,min(Xnew,[],1),max(Xnew,[],1),LB1,UB1);
-% Xnew2 = boxShift_working(Xnew,min(Xnew,[],1),max(Xnew,[],1),LB2,UB2);
-% 
-% % [Xnew1,w]=GLgn_pts(LB1,UB1,5);
-% % [Xnew2,w]=GLgn_pts(LB2,UB2,5);
-% 
-% xpoint= dsX.X(1,:);
-% 
-% Xnew=[Xnew1;Xnew2];
-% Xnew(:,1)=Xnew(:,1);
-% dd=xpoint-mean(Xnew,1);
-% Xnew = Xnew + repmat(dd,size(Xnew,1),1);
-% 
-
-% [Xntruek1,~] = dsX.ApplyAffineTransform_Final2Original(Xnew, zeros(size(Xnew,1),1) );
-% 
-% % Xntruek=zeros(size(Xntruek1));
-% pntruek1=zeros(size(Xnew,1),1);
-
-% for i=1:size(Xnew,1)
-%     Xntruek=model.fback(dtkk1,Tk1,Xntruek1(i,:));
-%     XnNormk = priorpdfnormk.transForms.trueX2normX(Xntruek(:));
-%     pnnormk = priorpdfnormk.func(XnNormk);
-%     if isinf(pnnormk)
-%         keyboard
-%     end
-%     pntruek1(i) = priorpdfnormk.transForms.normprob2trueprob(pnnormk);    
-% end
-% 
-% pnew = dsX.ApplyAffineTransformProb_Original2Final(pntruek1);
-
-
-% [~,ind]=sort(pnew(:),1,'descend');
-% pnew=pnew(ind);
-% Xnew=Xnew(ind,:);
-% 
-% indd = pnew>1e-300;
-% pnew = pnew(indd);
-% Xnew=Xnew(indd,:);
-
-Xnew = dsX.X;
-pnew = dsX.p;
-% indd = pnew<1e-70;
-% pnew(indd) = 1e-70;
-
-for i=0:4
-    figure(33+i)
-    dsX.PlotPointsProbs3D([i+1,i+2],'ro');
-    hold on
-    plot3(Xnew(:,i+1),Xnew(:,i+2),pnew,'g+')
-    if isempty(Xmctest)==0
-        plot(Xnmctest(:,i+1),Xnmctest(:,i+2),'bs')
-    end
-    if isempty(Xtruth)==0
-        plot(Xntruth(:,i+1),Xntruth(:,i+2),'k*')
-    end
-    title(['true points and MC: time step = ',num2str(Tstepk1)])
-    hold off
-end
-
-% figure(33)
-% hold on
-% plot3(Xnew(:,1),Xnew(:,2),pnew,'g+')
-% hold off
-
-
-factconst = max(pnew)/10;
-pnfit = pnew/factconst;
-beq = log(pnfit);
-
-Aeq=zeros(size(Xnew,1),lamdim);
-for ib=1:length(Pf)
-    Aeq(:,ib)=evaluate_PolyforLargetSetX(Pf{ib},Xnew);
-end
-
-Aineq=zeros(size(Xineq,1),lamdim);
-for ib=1:length(Pf)
-    Aineq(:,ib)=evaluate_PolyforLargetSetX(Pf{ib},Xineq);
-end
-bineq = min(beq)*ones(size(Xineq,1),1);
-Nineq = size(Xineq,1);
-
-NN = size(Xnew,1);
-
-NNeq=10;
-AeqTop=Aeq(1:NNeq,:);
-beqTop=beq(1:NNeq);
-
-C=0.03;
-% wts=pnew/sum(pnew);
-wts=ones(size(pnew));
-wts(1:100)=20;
-
-cvx_begin
-    variables teq(NN) lam(lamdim) t%  teqTop(Ntop)
-    minimize( C*norm(lam,1)+1*norm(teq.*(wts),2) +t ) % +500*norm(teqTop,2)
-    subject to
-    Aeq*lam==beq+teq;
-    Aineq*lam<=bineq+t*ones(Nineq,1);
-%     t>=0;
-%     AeqTop*lam==beqTop; %+teqTop
-cvx_end
-
-% lam = Aeq\beq
-
-
-lam(1) = lam(1)+log(factconst);
-lamsol = lam;
-
-mxentpoly=zeros(1,dim+1);
-for i=1:lamdim
-    mxentpoly=add_sub_polyND(mxentpoly, scalar_multiply_polyND(lamsol(i),Pf{i}),'add');
-end
-mxentpoly=simplify_polyND(mxentpoly);
-
-%
-
 pdfnorm.dim =dim;
-pdfnorm.mxentpoly_norm = mxentpoly;
+pdfnorm.mxentpoly_norm = PnD;
 
-LB = -1.2*ones(dim,1);
-UB = 1.2*ones(dim,1);
-pdfnorm.func=@(x)exppdf_withbounds(x,mxentpoly,LB,UB);
+LB = -1.1*ones(dim,1);
+UB = 1.1*ones(dim,1);
+pdfnorm.func=@(x)exppdf_withbounds(x,PnD,LB,UB);
+pdfnorm.expfunc=@(x)expofaexppdf_withbounds(x,PnD,LB,UB);
+
 pdfnorm.transForms = dsX.GetTrasnformers();
 
-pdfnorm.info = 'true-0I-hypercube-11';
+pdfnorm.info = 'true-50I';
 pdfnorm.pdftype = 'ExpPdf';
 
-pdfnorm.GMMHull = GMMHull;
+% pdfnorm.GMMHull = GMMHull;
 pdfnorm.LB = LB;
 pdfnorm.UB = UB;
-pdfnorm.RigTree = RigTree;
+
+% [Xqi,pts1Dqi,interpPoly1Dqi]=getsparsePts(dim+3,dim);
+[Xqi,~] = GH_points(zeros(dim,1),(1/3)^2*eye(dim),4);
+% mm=max(max(Xqi));
+% Xqi = 1.1*Xqi/mm;
+normprobs = pdfnorm.func(Xqi);
+Xnew=pdfnorm.transForms.normX2trueX(Xqi);
+probsnew=pdfnorm.transForms.normprob2trueprob(normprobs);
+
+
+figure(100)
+plot3(Xnew(:,1),Xnew(:,2),probsnew,'bo',Xk1(:,1),Xk1(:,2),probsk1,'r+')
+
+
+% pdfnorm.RigTree = RigTree;
 
 % normconst = integratorFuncTrueX_usingpdfnorm(pdfnorm,@(x)constantfunc(x,1),'RegTreeBoxIntegrator');
-% 
+%
 % pdfnorm.func=@(x)(1/normconst)*exp(evaluate_polyND(mxentpoly_norm,x));
 
 %
-Xtest = [mvurnd(-1.2*ones(dim,1),1.2*ones(dim,1),200000);mvurnd(-0.6*ones(dim,1),0.6*ones(dim,1),20000)];
-
-pestXnew = pdfnorm.func(Xnew);
-pestXtest = pdfnorm.func(Xtest);
-for i=0:4
-    figure(33+i)
-    dsX.PlotPointsProbs3D([i+1,i+2],'ro');
-    hold on
-    plot3(Xnew(:,i+1),Xnew(:,i+2),pnew,'g+')
-    plot3(Xnew(:,i+1),Xnew(:,i+2),pestXnew,'bs')
-    plot3(Xtest(:,i+1),Xtest(:,i+2),pestXtest,'k.')
-    if isempty(Xmctest)==0
-        plot(Xnmctest(:,i+1),Xnmctest(:,i+2),'bs')
-    end
-    if isempty(Xtruth)==0
-        plot(Xntruth(:,i+1),Xntruth(:,i+2),'k*')
-    end
-    title(['true points and MC: time step = ',num2str(Tstepk1)])
-    hold off
-end
-
-% figure(33)
-% hold on
-% plot3(Xnew(:,1),Xnew(:,2),pdfnorm.func(Xnew),'bs')
-% plot3(Xtest(:,1),Xtest(:,2),pdfnorm.func(Xtest),'k.')
-% hold off
-%%
-
-% keyboard

@@ -39,7 +39,7 @@ constants.normT2trueT=(constants.TU);
 
 time.t0=0 *constants.trueT2normT;
 time.tf=48*60*60 *constants.trueT2normT;
-time.dt=12*60*60 *constants.trueT2normT;
+time.dt=6*60*60 *constants.trueT2normT;
 time.dtplot=0.1*60*60 *constants.trueT2normT;
 
 time.Tvec=time.t0:time.dt:time.tf;
@@ -107,15 +107,30 @@ axis square
 % plotting the propagatin of MC
 Nmc=5000;
 XMC=zeros(Nmc,model.fn,time.Ntsteps);
+XMCcoe=zeros(Nmc,model.fn,time.Ntsteps);
 XMC(:,:,1)=mvnrnd(x0',P0,Nmc);
+for i=1:Nmc
+    [p,a,ecc,incl,omega,argp,nu,m,arglat,truelon,lonper ] = rv2coe(XMC(i,1:3,1),XMC(i,4:6,1), 1);
+    XMCcoe(i,:,1)=[p,a,ecc,incl,omega,argp];
+end
 for i=1:Nmc
     i
     for k=2:time.Ntsteps
         XMC(i,:,k)=model.f(time.dt,time.Tvec(k-1),XMC(i,:,k-1));
+        [p,a,ecc,incl,omega,argp,nu,m,arglat,truelon,lonper ] = rv2coe(XMC(i,1:3,k),XMC(i,4:6,k), 1);
+        XMCcoe(i,:,k)=[p,a,ecc,incl,omega,argp];
     end
 end
 pMC = mvnpdf(XMC(:,:,1),x0',P0);
 
+%%
+close all
+kk=5;
+states=[5,6];
+figure
+plot(XMCcoe(:,states(1),kk),XMCcoe(:,states(2),kk),'bo')
+figure
+plot(XMC(:,states(1),kk),XMC(:,states(2),kk),'bo')
 %%
 close all
 if 0
@@ -132,7 +147,9 @@ if 0
         
         subplot(1,2,2)
         XXX = zeros(Nmc,model.fn);
+        XXXcoe = zeros(Nmc,model.fn);
         XXX = XMC(:,:,k);
+        XXXcoe = XMCcoe(:,:,k);
         [m,P] = MeanCov(XXX,ones(Nmc,1)/Nmc);
         A=sqrtm(inv(P));
         for i=1:Nmc

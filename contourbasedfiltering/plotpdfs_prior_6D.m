@@ -10,9 +10,9 @@ states2remove = 1:dim;
 states2remove(states2keep)=[];
 
 
-
-Xn = pdfnorm.transForms.trueX2normX(X);
-pn = pdfnorm.transForms.trueprob2normprob(probs);
+% 
+% Xn = pdfnorm.transForms.trueX2normX(X);
+% pn = pdfnorm.transForms.trueprob2normprob(probs);
 % GMMfitter = GMMFitDataSet(Xn,pn);
 % GMM = GMMfitter.FitGMM_kmeans_optimwt(3);
 
@@ -28,75 +28,56 @@ if isempty(mquadf)==0
     [x,w] = UT_sigmapoints(mquadf,Pquadf,2);
     x = pdfnorm.transForms.trueX2normX(x) ;
     [mquadfnorm,Pquadfnorm]=MeanCov(x,w);
-    mquadfnorm=mquadfnorm(:);
+    mquadfnorm=mquadfnorm(:)';
 end
 
-[a,ain]=max(pn);
-maxXn = Xn(ain,:);
+% [a,ain]=max(pn);
+% maxXn = Xn(ain,:);
 
 % keyboard
 
-[mXn,PXn] = MeanCov(Xn,pn/sum(pn));
+% [mXn,PXn] = MeanCov(Xn,pn/sum(pn));
 
-[Xx,Xy]=meshgrid(linspace(-1.2,1.2,35),linspace(-1.2,1.2,35) );
+[Xx,Xy]=meshgrid(linspace(-3,3,25),linspace(-3,3,25) );
 
-remdim=length(states2remove);
-remdomainLB=-1.2*ones(remdim,1);
-remdomainUB=1.2*ones(remdim,1);
-volremdom = prod(remdomainUB-remdomainLB);
-[Xstates2remove,wrem]=GLgn_pts(remdomainLB,remdomainUB,7);
-
-pdfprobs_norm_cell = cell(size(Xx,1),1);
-QuadFilprobs_norm_cell = cell(size(Xx,1),1);
-parfor i=1:size(Xx,1)
-    pdfprobs_norm = zeros(size(Xx,2),1);
-    QuadFilprobs_norm = zeros(size(Xx,2),1);
-    Xpoint = zeros(size(Xx,2),dim);
-    Xpointquad = zeros(size(Xx,2),dim);
-    for j=1:size(Xx,2)
-        Xpointquad(j,states2keep) = [Xx(i,j),Xy(i,j)];
-        Xpointquad(j,states2remove) = mquadfnorm(states2remove);
-    end
-    pmargnorm = zeros(size(Xx,2),1);
-    for j=1:size(Xx,2)
-        Xpoint(j,states2keep) = [Xx(i,j),Xy(i,j)];
-        pmargnorm(j) = 0;
-        for ss=1:size(Xstates2remove,1)
-            Xpoint(j,states2remove) = Xstates2remove(ss,:);
-            pmargnorm(j)=pmargnorm(j)+wrem(ss)*pdfnorm.func(Xpoint(j,:));
-        end
-        
-    end
-    pmargnorm=volremdom*pmargnorm;
-    
-    
-    pdfprobs_norm = pmargnorm;
-    QuadFilprobs_norm = mvnpdf(Xpointquad,mquadfnorm',Pquadfnorm);
-    
-%     for j=1:size(Xx,2)
-%         [i,j]
-%         Xpoint = zeros(1,dim);
-%         Xpoint(states2keep) = [Xx(i,j),Xy(i,j)];
-%         Xpoint(states2remove) = mXn(states2remove);
-%         pdfprobs_norm(j) = pdfnorm.func(Xpoint);
-% %         pdfprobs_norm(j) = marginalize_exp_pdf_modf([Xx(i,j),Xy(i,j)],states2remove,pdfnorm,X,probs,mX,PX,'GMM_MC');
-%         Xpoint = zeros(1,dim);
-%         Xpoint(states2keep) = [Xx(i,j),Xy(i,j)];
-%         Xpoint(states2remove) = mquadfnorm(states2remove);
-%         
-%         QuadFilprobs_norm(j) = mvnpdf(Xpoint,mquadfnorm',Pquadfnorm);
-%     end
-    pdfprobs_norm_cell{i}=pdfprobs_norm;
-    QuadFilprobs_norm_cell{i}=QuadFilprobs_norm;
-end
-
-pdfprobs_norm = zeros(size(Xx));
+%% first ukf 
+% QuadFilprobs_norm_cell = cell(size(Xx,1),1);
 QuadFilprobs_norm = zeros(size(Xx));
 for i=1:size(Xx,1)
     for j=1:size(Xx,2)
-        pdfprobs_norm(i,j) = pdfprobs_norm_cell{i}(j);
-        QuadFilprobs_norm(i,j) = QuadFilprobs_norm_cell{i}(j);
+        QuadFilprobs_norm(i,j)=mvnpdf([Xx(i,j),Xy(i,j)],mquadfnorm(states2keep),Pquadfnorm(states2keep,states2keep));
+    end  
+end
+
+remdim=length(states2remove);
+remdomainLB=-1.1*ones(remdim,1);
+remdomainUB=1.1*ones(remdim,1);
+volremdom = prod(remdomainUB-remdomainLB);
+[Xstates2remove,wrem]=GLgn_pts(remdomainLB,remdomainUB,9);
+
+pdfprobs_norm_cell = cell(size(Xx,1),1);
+
+parfor i=1:size(Xx,1)
+    i
+    pmargnorm = zeros(size(Xx,2),1);
+    
+    for j=1:size(Xx,2)
+        Xpoint = zeros(size(Xstates2remove,1),dim);
+        Xpoint(:,states2keep) = repmat([Xx(i,j),Xy(i,j)],size(Xstates2remove,1),1);
+        Xpoint(:,states2remove) = Xstates2remove;
+        ff= pdfnorm.func(Xpoint);
+        pmargnorm(j) = wrem(:)'*ff(:);       
     end
+    pmargnorm=volremdom*pmargnorm;
+
+
+    pdfprobs_norm_cell{i}=pmargnorm;
+
+end
+
+pdfprobs_norm = zeros(size(Xx));
+for i=1:size(Xx,1)
+        pdfprobs_norm(i,:) = pdfprobs_norm_cell{i};
 end
 
 % % get the true points and their probs
@@ -116,6 +97,8 @@ end
 % end
 
 %%
+figure
+
 
 figure(2)
 hold off

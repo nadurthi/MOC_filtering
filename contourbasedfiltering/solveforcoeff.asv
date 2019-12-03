@@ -1,0 +1,28 @@
+function solveforcoeff(A,b,Aineq,bineq,c0)
+% Solve Ac=b with Aineq*c<= bineq
+if isIllConditioned(A)
+    Am = zeros(size(A));
+    bm = zeros(size(b));
+    
+    
+    for i=1:size(A)
+        mx = max(abs(A(i,:)));
+        mn = min(abs(A(i,:)));
+        mm = mean([mx,mn]);
+        
+        Am(i,:) = A(i,:)/mm;
+        bm(i) = b(i)/mm;
+    end
+    
+    Aineq = zeros(size(Aineq));
+    bineq = zeros(size(bineq));
+    for i=1:size(Aineq)
+        mx = max(abs(Aineq(i,:)));
+        mn = min(abs(Aineq(i,:)));
+        mm = mean([mx,mn]);
+        
+        Am(i,:) = A(i,:)/mm;
+        bm(i) = b(i)/mm;
+    end
+    
+end

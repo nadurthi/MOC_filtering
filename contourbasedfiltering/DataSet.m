@@ -45,7 +45,11 @@ classdef DataSet < handle
         end
         function obj = AddMeanCov_to_OI_Trasform(obj,mx,Px)
             % remember the P is cov of X nad sqrtm(inv(P)) is used
-            A = inv(sqrtm(Px));
+%             A = inv(sqrtm(Px));
+            [u,v]=eig(Px);
+            vv=1./diag(sqrt(v));
+            A=u*diag(vv)*u';
+            
             m = -A*mx;
             obj = obj.AddAffineTrasform(A,m);
         end
@@ -97,6 +101,9 @@ classdef DataSet < handle
             transForms.normX2trueX = @(xn)affineTransform(xn,Atranf2true,mtransf2true);
             transForms.normprob2trueprob = @(p)p/det(Atranf2true);
             transForms.trueprob2normprob = @(p)p/det(Atranf2norm);
+            
+            transForms.normprob2trueprob_constant = 1/det(Atranf2true);
+            transForms.trueprob2normprob_constant = 1/det(Atranf2norm);
             
         end
         function obj = Reset2Original(obj)
